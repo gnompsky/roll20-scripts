@@ -1,19 +1,17 @@
-﻿class AutoStatus {
+﻿class AutoStatus extends Mod {
   private readonly HP_BAR_ID = 1;
-  private readonly HP_BAR_PROPERTY: keyof GraphicObjectProperties = `bar${this.HP_BAR_ID}_value`;
+  private readonly HP_BAR_PROPERTY = "bar1_value";
   private readonly STA_BAR_ID = 2;
-  private readonly STA_BAR_PROPERTY: keyof GraphicObjectProperties = `bar${this.STA_BAR_ID}_value`;
+  private readonly STA_BAR_PROPERTY = "bar2_value";
 
-  public init() {
-    this.setupEventHandlers();
-  }
-
-  private setupEventHandlers() {
-    on(
+  public initialise(): void {}
+  public registerEventHandlers(): void {
+    on<"graphic">(
       `change:graphic:${this.HP_BAR_PROPERTY}`,
       (obj, prev) => this.handleBarChange(obj, prev, this.HP_BAR_ID, this.HP_BAR_PROPERTY, "dead")
     );
-    on(
+
+    on<"graphic">(
       `change:graphic:${this.STA_BAR_PROPERTY}`,
       (obj, prev) => this.handleBarChange(obj, prev, this.STA_BAR_ID, this.STA_BAR_PROPERTY, "sleepy", this.onStunEmpty)
     );
@@ -22,13 +20,13 @@
   private handleBarChange(
     obj: GraphicObject,
     prev: GraphicObjectProperties,
-    barId: number,
-    barProperty: keyof GraphicObjectProperties,
+    barId: typeof this.HP_BAR_ID | typeof this.STA_BAR_ID,
+    barProperty: typeof this.HP_BAR_PROPERTY | typeof this.STA_BAR_PROPERTY,
     statusOnEmpty: string,
     onEmptyCallback?: (obj: GraphicObject) => void
   ) {
     const barValStr = obj.get(barProperty);
-    const barVal = parseInt(barValStr, 10);
+    const barVal = typeof barValStr === "string" ? parseInt(barValStr, 10) : barValStr;
     if (isNaN(barVal)) {
       log(`[AutoStatus] handleBarChange: Bar ${barId} does not contain a number: '${barValStr}'`);
       return;
@@ -37,13 +35,13 @@
     obj.set(`status_${statusOnEmpty}`, barVal <= 0);
 
     if (onEmptyCallback) {
-      const prevVal = parseInt(prev[barProperty], 10);
+      const prevValStr = prev[barProperty];
+      const prevVal = typeof prevValStr === "string" ? parseInt(prevValStr, 10) : prevValStr;
       if (prevVal > 0 &&
         barVal !== prevVal &&
         barVal <= 0 &&
         obj.get("_pageid") === Campaign().get("playerpageid")
       ) {
-
         onEmptyCallback(obj);
       }
     }
@@ -58,8 +56,4 @@
   }
 }
 
-const AutoStatusInstance = new AutoStatus();
-
-on("ready", () => {
-  AutoStatusInstance.init();
-});
+registerMod(AutoStatus);

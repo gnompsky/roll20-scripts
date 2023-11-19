@@ -1,16 +1,16 @@
 ﻿/* TODO: Automatically apply shield without having to click button in chat. Issue is finding selected token */
-class Quen {  
+type QuenState = {
+  quenedEntities: Record<string, boolean>
+};
+
+class Quen extends Mod<QuenState> { 
   private readonly HP_BAR_ID = 1;
-  private readonly HP_BAR_VALUE_PROPERTY = `bar1_value`;
-  private readonly TEMP_BAR_VALUE_PROPERTY = `bar3_value`;
-  private readonly TEMP_BAR_MAX_PROPERTY = `bar3_max`;
+  private readonly HP_BAR_VALUE_PROPERTY = "bar1_value";
+  private readonly TEMP_BAR_VALUE_PROPERTY = "bar3_value";
+  private readonly TEMP_BAR_MAX_PROPERTY = "bar3_max";
 
-  public init() {
-    state.quenedEntities = state.quenedEntities || {};
-    this.setupEventHandlers();
-  }
-
-  private setupEventHandlers() {
+  public initialise(): void {}
+  public registerEventHandlers(): void {
     on<"graphic">(`change:graphic:${this.HP_BAR_VALUE_PROPERTY}`, _.bind(this.handleHealthChange, this));
     on("chat:message", _.bind(this.handleChatMessage, this));
   }
@@ -52,7 +52,7 @@ class Quen {
 
   private addQuenTo(token: GraphicObject, hp: number) {
     // Store that this token has quen
-    state.quenedEntities[token.get("id")] = true;
+    this.getState().quenedEntities[token.get("id")] = true;
 
     // Apply aura and tint
     token.set("aura1_radius", 0.2);
@@ -65,6 +65,8 @@ class Quen {
   }
 
   private removeQuenFrom(token: GraphicObject) {
+    const state = this.getState();
+
     // If this entity is not quened do nothing
     if (!state.quenedEntities || !state.quenedEntities[token.get("id")]){
       return;
@@ -132,8 +134,4 @@ class Quen {
 
 }
 
-const QuenInstance = new Quen();
-
-on('ready',function() {
-  QuenInstance.init();
-});
+registerMod(Quen);

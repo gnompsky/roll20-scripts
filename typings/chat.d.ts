@@ -16,7 +16,7 @@ declare type Message = {
   readonly type: "general" | "rollresult" | "gmrollresult" | "emote" | "whisper" | "desc" | "api";
   readonly who: string;
   readonly playerid: ObjectId;
-  readonly content: "";
+  readonly content: string;
   readonly inlinerolls?: NotImplemented[];
   readonly rolltemplate?: string;
 }

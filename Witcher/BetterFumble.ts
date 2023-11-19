@@ -11,12 +11,9 @@ type RollValues = {
 };
 
 /* Implements Fumble rules by Spirited-dark */
-class BetterFumble {
-  public init() {
-    this.setupEventHandlers();
-  }
-
-  private setupEventHandlers() {
+class BetterFumble extends Mod {
+  public initialise(): void {}
+  public registerEventHandlers(): void {
     on("chat:message", (msg) => {
       const isFumbleMessage = (msg.type === "general" || msg.type === "whisper") &&
         (msg.content.indexOf("{{fumble=") !== -1) &&
@@ -152,7 +149,7 @@ class BetterFumble {
     }
   }
 
-  private handleFumble(msg: Message) {
+  private handleFumble(msg: GeneralMessage | WhisperMessage) {
     const isWhisper = msg.type === "whisper";
     const rollMeta = this.getRollMeta(msg.content);
 
@@ -166,8 +163,4 @@ class BetterFumble {
   }
 }
 
-const BetterFumbleInstance = new BetterFumble();
-
-on('ready',function() {
-  BetterFumbleInstance.init();
-});
+registerMod(BetterFumble);

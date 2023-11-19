@@ -1,8 +1,9 @@
 ﻿// TODO: This needs work!
-declare type State = boolean |
-  number |
-  string |
-  (boolean | number | string)[] |
-  Record<string, boolean | number | string>;
+declare type State = Record<string, StateValue>;
 
-declare const state: Record<string, State>;
+declare type StatePrimitiveValue = boolean | number | string; 
+declare type StateValue = StatePrimitiveValue | 
+  (StatePrimitiveValue | StatePrimitiveValue[] | Record<string, StatePrimitiveValue>)[] |
+  Record<string, StatePrimitiveValue | StatePrimitiveValue[] | Record<string, StatePrimitiveValue>>;
+
+declare const state: State;
