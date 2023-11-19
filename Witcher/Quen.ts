@@ -8,10 +8,10 @@ interface State {
 /* TODO: Automatically apply shield without having to click button in chat. Issue is finding selected token */
 class Quen {
   private readonly HP_BAR_ID = 1;
-  private readonly HP_BAR_VALUE_PROPERTY = `bar${this.HP_BAR_ID}_value`;
+  private readonly HP_BAR_VALUE_PROPERTY: keyof GraphicObjectProperties = `bar${this.HP_BAR_ID}_value`;
   private readonly TEMP_BAR_ID = 3;
-  private readonly TEMP_BAR_VALUE_PROPERTY = `bar${this.TEMP_BAR_ID}_value`;
-  private readonly TEMP_BAR_MAX_PROPERTY = `bar${this.TEMP_BAR_ID}_max`;
+  private readonly TEMP_BAR_VALUE_PROPERTY: keyof GraphicObjectProperties = `bar${this.TEMP_BAR_ID}_value`;
+  private readonly TEMP_BAR_MAX_PROPERTY: keyof GraphicObjectProperties = `bar${this.TEMP_BAR_ID}_max`;
 
   public init() {
     state.quenedEntities = state.quenedEntities || {};
@@ -57,7 +57,7 @@ class Quen {
     }
   }
 
-  private addQuenTo(token: Roll20Object, hp: number) {
+  private addQuenTo(token: GraphicObject, hp: number) {
     // Store that this token has quen
     state.quenedEntities[token.get("id")] = true;
 
@@ -71,7 +71,7 @@ class Quen {
     token.set(this.TEMP_BAR_VALUE_PROPERTY, hp);
   }
 
-  private removeQuenFrom(token: Roll20Object) {
+  private removeQuenFrom(token: GraphicObject) {
     // If this entity is not quened do nothing
     if (!state.quenedEntities || !state.quenedEntities[token.get("id")]){
       return;
@@ -96,7 +96,7 @@ class Quen {
    * temp HP available. If it does those are removed first and the real HP is
    * updated to reflect the temp HP absorbing the hit.
    */
-  private handleHealthChange(obj: Roll20Object, prev: Record<string, string>) {
+  private handleHealthChange(obj: GraphicObject, prev: GraphicObjectProperties) {
     const prevHpValStr = prev[this.HP_BAR_VALUE_PROPERTY];
     const prevHpVal = parseInt(prevHpValStr, 10);
     if (isNaN(prevHpVal)) {

@@ -1,8 +1,8 @@
 ﻿class AutoStatus {
   private readonly HP_BAR_ID = 1;
-  private readonly HP_BAR_PROPERTY = `bar${this.HP_BAR_ID}_value`;
+  private readonly HP_BAR_PROPERTY: keyof GraphicObjectProperties = `bar${this.HP_BAR_ID}_value`;
   private readonly STA_BAR_ID = 2;
-  private readonly STA_BAR_PROPERTY = `bar${this.STA_BAR_ID}_value`;
+  private readonly STA_BAR_PROPERTY: keyof GraphicObjectProperties = `bar${this.STA_BAR_ID}_value`;
 
   public init() {
     this.setupEventHandlers();
@@ -20,12 +20,12 @@
   }
 
   private handleBarChange(
-    obj: Roll20Object,
-    prev: Record<string, string>,
+    obj: GraphicObject,
+    prev: GraphicObjectProperties,
     barId: number,
-    barProperty: string,
+    barProperty: keyof GraphicObjectProperties,
     statusOnEmpty: string,
-    onEmptyCallback?: (obj: Roll20Object) => void
+    onEmptyCallback?: (obj: GraphicObject) => void
   ) {
     const barValStr = obj.get(barProperty);
     const barVal = parseInt(barValStr, 10);
