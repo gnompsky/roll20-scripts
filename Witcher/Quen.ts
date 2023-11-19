@@ -1,16 +1,18 @@
 ﻿/* TODO: Automatically apply shield without having to click button in chat. Issue is finding selected token */
-type QuenState = {
-  quenEntities: Record<ObjectId, boolean>
-};
+module Quen {
+  export type State = {
+    quenEntities: Record<ObjectId, boolean>
+  };
+}
 
-class Quen implements Mod<QuenState> { 
+class Quen implements Mod<Quen.State> {
   private readonly HP_BAR_ID = 1;
   private readonly HP_BAR_VALUE_PROPERTY = "bar1_value";
   private readonly TEMP_BAR_VALUE_PROPERTY = "bar3_value";
   private readonly TEMP_BAR_MAX_PROPERTY = "bar3_max";
 
   public initialise(): void {
-    const state = getState<Quen, QuenState>(this);
+    const state = this.getState();
     if (!state.quenEntities) state.quenEntities = {};
     
     logger(Quen, state.quenEntities);
@@ -64,7 +66,7 @@ class Quen implements Mod<QuenState> {
 
   private addQuenTo(token: GraphicObject, hp: number) {
     // Store that this token has quen
-    getState<Quen, QuenState>(this).quenEntities[token.get("id")] = true;
+    this.getState().quenEntities[token.get("id")] = true;
 
     // Apply aura and tint
     token.set("aura1_radius", 0.2);
@@ -77,7 +79,7 @@ class Quen implements Mod<QuenState> {
   }
 
   private removeQuenFrom(token: GraphicObject) {
-    const state = getState<Quen, QuenState>(this);
+    const state = this.getState();
     const tokenId = token.get("id");
 
     // If this entity is not quened do nothing
@@ -148,9 +150,13 @@ class Quen implements Mod<QuenState> {
   }
 
   private hasQuen(token: GraphicObject): boolean {
-    const state = getState<Quen, QuenState>(this);
+    const state = this.getState();
     const tokenId = token.get("id");
     return state.quenEntities.hasOwnProperty(tokenId) && state.quenEntities[tokenId];
+  }
+  
+  private getState(): Quen.State {
+    return getState<Quen, Quen.State>(this);
   }
 }
 
