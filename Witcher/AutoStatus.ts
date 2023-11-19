@@ -49,7 +49,7 @@
     }
   }
 
-  private onStunEmpty(obj: Roll20Object) {
+  private onStunEmpty(obj: GraphicObject) {
     sendChat(
       obj.get("name"),
       "/me you are stunned! You can’t take any actions other than Recover and anyone attacking you only has to beat DC:10 to hit you until you " +

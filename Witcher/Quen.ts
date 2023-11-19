@@ -1,5 +1,5 @@
 ﻿// noinspection JSUnusedGlobalSymbols
-interface State {
+class QuenState implements State {
   Quen: {
     quenedEntities: Record<string, boolean>,
   };
