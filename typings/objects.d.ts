@@ -465,7 +465,7 @@ declare type Roll20Object<TProperties extends Record<string, any> = Roll20Object
   set<T extends string & Omit<keyof TProperties, "id" | "_id" | "_type" | "_pageid">>(property: T, value: TProperties[T]): void;
 
   /* Set multiple values on the current object */
-  set(newData: TProperties): void;
+  set(newData: Partial<TProperties> | TProperties): void;
 }
 
 /* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-Campaign()(function) */

@@ -29,8 +29,7 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
     // We won't support continuing across sessions for now so just clear any previously in production animation
     state.inProduction = null;
 
-    logger(AnimationStudio, "Stored animations:");
-    logger(AnimationStudio, state.animations);
+    logger(AnimationStudio, "Stored animations: " + Object.keys(state.animations).length);
   }
 
   public registerEventHandlers(): void {
@@ -38,19 +37,19 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
   }
   
   private handleChatMessage(m: OneOfMessage): void {
-    if (!messageIsApiCommand(m, "animate")) return;
+    if (!messageIsApiCommand(m, "animation", false)) return;
     const msg = <ApiMessage>m;
     if (!playerIsGM(msg.playerid)) return;
     
     // Skip !animate and subcommand
     const args = msg.content.split(" ");
-    if (args.length < 2) return logger(AnimationStudio, "ERROR: No subcommand provided!");
+    if (args.length < 2) return this.handleRenderMenu(msg);
     
     const command = args[1].toLowerCase();
     const commandArgs = _.rest(args, 2);
     
     switch (true) {
-      case (command === "list"): return this.handleListCommand(msg);
+      case (command === "list"): return this.handleListCommand(msg, commandArgs.length >= 1 ? commandArgs[0] : undefined);
       case (command === "record" && commandArgs.length >= 2): return this.handleRecordCommand(msg, commandArgs[0], parseInt(commandArgs[1], 10));
       case (command === "addframe" && !!this.getState().inProduction): return this.handleAddFrame(msg);
       case (command === "deleteframe" && !!this.getState().inProduction): return this.handleDeleteFrame(msg);
@@ -61,18 +60,39 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
     }
   }
 
-  private handleListCommand(msg: ApiMessage): void {
-    const animations = this.getState().animations;
+  private handleRenderMenu(msg: ApiMessage): void {
+    const animations = this.getAnimationKeysForThisPage(msg, false);
+    let animationList = animations.map((key) => {
+      const name = key.split(".")[1];
+      return `${name},${name}`;
+    }).join("|");
 
-    let message = `/w gm Stored animations:
+    // If there's only one animation we need to add an empty option at the end or the menu will be broken
+    animationList += animations.length > 1 ? "" : "|";
+    
+    let message = `/w gm &{template:default} {{name=Animation Studio
+}} {{[List (this page)](!animation list)=[List (all pages)](!animation list all)
+}} {{[New](!animation record ?{Animation name} ?{FPS|1})=[Play](!animation play ?{Animation|${animationList}})
+}} {{[Delete (from this page)](!animation delete ?{Animation|${animationList}})=
+}}`;
+    
+    sendChat(msg.who, message);
+  }
+  
+  private handleListCommand(msg: ApiMessage, all?: string): void {
+    const animations = this.getAnimationKeysForThisPage(msg, all === "all");
+
+    let message = `/w gm &{template:default} {{name=Stored animations
 `;
-    _.forEach(animations, (_, key) => {
+    _.forEach(animations, (key) => {
       const [pageId, animationName] = key.split(".");
       const pageName = this.getPage(pageId).get("name");
       
-      message += `- ${animationName} (${pageName})
+      message += `}} {{${animationName}=(${pageName})
 `;
     });
+    
+    message += "}}";
     
     sendChat(msg.who, message);
   }
@@ -90,6 +110,7 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
       };
       
       sendChat(msg.who, `/w gm Recording animation '${animationName}' (${fps} FPS) on page '${page.get("name")}'`);
+      this.renderRecordMenu(msg);
   }
   
   private handleAddFrame(msg: ApiMessage): void {
@@ -115,6 +136,7 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
     anim.frames.push(newFrame);
 
     sendChat(msg.who, `/w gm Frame ${anim.frames.length} recorded`);
+    this.renderRecordMenu(msg);
   }
   
   private handleDeleteFrame(msg: ApiMessage): void {
@@ -123,6 +145,7 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
     
     anim.frames.pop();
     sendChat(msg.who, `/w gm Frame ${anim.frames.length + 1} deleted`);
+    this.renderRecordMenu(msg);
   }
   
   private handleSaveAnimation(msg: ApiMessage): void {
@@ -136,13 +159,61 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
   }
   
   private handlePlayCommand(msg: ApiMessage, animationName: string): void {
-    sendChat(msg.who, `/w gm NOT IMPLEMENTED! Playing animation '${animationName}'`);
+    const state = this.getState();
+    const key: AnimationStudio.AnimationKey = `${this.getPageId(msg)}.${animationName}`;
+    const animation = state.animations[key];
+    if (!animation) return sendChat(msg.who, `/w gm Animation '${animationName}' not found`);
+
+    let currentFrame = 0;
+    const interval: NodeJS.Timeout = setInterval(
+      // Run the next frame of the animation...
+      function() {
+        if (currentFrame >= animation.frames.length) return clearInterval(interval);
+        
+        const frame = animation.frames[currentFrame];
+        _.forEach(frame.objectProperties, (props, id) => {
+          const graphic = getObj("graphic", id)!;
+          if (graphic.get("_subtype") !== "token") return;
+  
+          graphic.set(props);
+        });
+        currentFrame++;
+      },
+      // ...at the animation's FPS
+      Math.floor(1000 / animation.fps)
+    );
   }
   
   private handleDeleteCommand(msg: ApiMessage, animationName: string): void {
-    sendChat(msg.who, `/w gm NOT IMPLEMENTED! Deleting animation '${animationName}'`);
+    const state = this.getState();
+    const key: AnimationStudio.AnimationKey = `${this.getPageId(msg)}.${animationName}`;
+
+    if (!state.animations[key]) return sendChat(msg.who, `/w gm Animation '${animationName}' not found`);
+    
+    delete state.animations[key];
+    sendChat(msg.who, `/w gm Animation '${animationName}' deleted`);
   }
   
+  private renderRecordMenu(msg: ApiMessage): void {
+    const animation = this.getState().inProduction!.definition;
+    
+    const message = `/w gm &{template:default} {{name=Recording animation
+}} {{Current frame=${animation.frames.length + 1}
+}} {{[Add frame](!animation addframe)=[Delete frame](!animation deleteframe)
+}} {{[Save](!animation save)=
+}}`;
+    
+    sendChat(msg.who, message);
+  }
+
+  private getAnimationKeysForThisPage(msg: ApiMessage, allPages: boolean): AnimationStudio.AnimationKey[] {
+    let animations = Object.keys(this.getState().animations) as AnimationStudio.AnimationKey[];
+    if (!allPages) {
+      const pageId = this.getPageId(msg);
+      animations = animations.filter((key) => key.startsWith(`${pageId}.`));
+    }
+    return animations;
+  }
   private getPageId(msg: OneOfMessage): ObjectId {
     return getObj("player", msg.playerid)!.get("_lastpage");
   }
