@@ -20,7 +20,7 @@ declare type Message = {
   readonly who: string;
   readonly playerid: ObjectId;
   readonly content: string;
-  readonly inlinerolls?: NotImplemented[];
+  readonly inlinerolls?: InlineRoll[];
   readonly rolltemplate?: string;
 }
 declare type OneOfMessage = GeneralMessage | RollResultMessage | GmRollResultsMessage | EmoteMessage | WhisperMessage | DescMessage | ApiMessage;

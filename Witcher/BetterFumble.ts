@@ -20,7 +20,7 @@ class BetterFumble implements Mod {
         (msg.rolltemplate === "singleroll" || msg.rolltemplate === "doubleroll" || msg.rolltemplate === "mainskill");
 
       if (isFumbleMessage) {
-        this.handleFumble(msg);
+        this.handleFumble(<GeneralMessage | WhisperMessage>msg);
       }
     });
   }
@@ -53,7 +53,7 @@ class BetterFumble implements Mod {
   }
 
   // TODO: Better typings for inline roll
-  private getRollValues(inlineRolls: any[], rollIndex: number) : RollValues {
+  private getRollValues(inlineRolls: InlineRoll[], rollIndex: number) : RollValues {
     const skillRoll = _.filter(inlineRolls, (roll: any) => roll.expression.indexOf("[STAT]") !== -1)[rollIndex];
     logger(BetterFumble, `Checking roll ${rollIndex}`);
     logger(BetterFumble, skillRoll);
@@ -74,16 +74,16 @@ class BetterFumble implements Mod {
       } else if (value.type === "M" && nextType) {
         switch (nextType) {
           case "STAT":
-            stat = parseInt(value.expr.replace("+", ""), 10);
+            stat = parseInt((""+value.expr).replace("+", ""), 10);
             break;
           case "PROF. SKILL":
           case "SKILL":
-            skill = parseInt(value.expr.replace("+", ""), 10);
+            skill = parseInt((""+value.expr).replace("+", ""), 10);
             break;
           // We can have a number of different mods e.g. MOD, LOCATION, EXTRA ACTION, so add them all up here
           default:
             if (mod == null) mod = 0;
-            mod += parseInt(value.expr.replace("+", ""), 10);
+            mod += parseInt((""+value.expr).replace("+", ""), 10);
             break;
         }
       } else if (value.type === "R" && value.dice === 1 && value.sides === 10) {
@@ -144,7 +144,7 @@ class BetterFumble implements Mod {
     }
   }
 
-  private extractRollValuesAndReportFumble(inlineRolls: object[], rollIndex: number, isWhisper: boolean, rollMeta: RollMeta) {
+  private extractRollValuesAndReportFumble(inlineRolls: InlineRoll[], rollIndex: number, isWhisper: boolean, rollMeta: RollMeta) {
     const rollValues = this.getRollValues(inlineRolls, rollIndex);
     logger(BetterFumble, rollValues);
 
