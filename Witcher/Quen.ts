@@ -1,16 +1,9 @@
-﻿class QuenState implements State {
-  Quen: {
-    quenedEntities: Record<string, boolean>,
-  };
-}
-
-/* TODO: Automatically apply shield without having to click button in chat. Issue is finding selected token */
-class Quen {
+﻿/* TODO: Automatically apply shield without having to click button in chat. Issue is finding selected token */
+class Quen {  
   private readonly HP_BAR_ID = 1;
-  private readonly HP_BAR_VALUE_PROPERTY: keyof GraphicObjectProperties = `bar${this.HP_BAR_ID}_value`;
-  private readonly TEMP_BAR_ID = 3;
-  private readonly TEMP_BAR_VALUE_PROPERTY: keyof GraphicObjectProperties = `bar${this.TEMP_BAR_ID}_value`;
-  private readonly TEMP_BAR_MAX_PROPERTY: keyof GraphicObjectProperties = `bar${this.TEMP_BAR_ID}_max`;
+  private readonly HP_BAR_VALUE_PROPERTY = `bar1_value`;
+  private readonly TEMP_BAR_VALUE_PROPERTY = `bar3_value`;
+  private readonly TEMP_BAR_MAX_PROPERTY = `bar3_max`;
 
   public init() {
     state.quenedEntities = state.quenedEntities || {};
@@ -98,21 +91,22 @@ class Quen {
    */
   private handleHealthChange(obj: GraphicObject, prev: GraphicObjectProperties) {
     const prevHpValStr = prev[this.HP_BAR_VALUE_PROPERTY];
-    const prevHpVal = parseInt(prevHpValStr, 10);
+    const prevHpVal = typeof prevHpValStr === "string" ? parseInt(prevHpValStr, 10) : prevHpValStr;
     if (isNaN(prevHpVal)) {
       this.logger("handleHealthChange", `WARN: Previous bar ${this.HP_BAR_ID} does not contain a number: '${prevHpValStr}'`);
       return;
     }
 
     const hpValStr = obj.get(this.HP_BAR_VALUE_PROPERTY);
-    const hpVal = parseInt(hpValStr, 10);
+    const hpVal = typeof hpValStr === "string" ? parseInt(hpValStr, 10) : hpValStr;
     if (isNaN(hpVal)) {
       this.logger("handleHealthChange", `WARN: Bar ${this.HP_BAR_ID} does not contain a number: '${hpValStr}'`);
       return;
     }
 
     if (prevHpVal > hpVal) {
-      const tmpHpVal = parseInt(obj.get(this.TEMP_BAR_VALUE_PROPERTY), 10);
+      const tmpHpValStr = obj.get(this.TEMP_BAR_VALUE_PROPERTY);
+      const tmpHpVal = typeof tmpHpValStr === "string" ? parseInt(tmpHpValStr, 10) : tmpHpValStr;
       if (!isNaN(tmpHpVal)) {
         const hpChange = prevHpVal - hpVal;
         const remainingTmp = tmpHpVal - hpChange;

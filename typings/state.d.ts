@@ -1,4 +1,8 @@
 ﻿// TODO: This needs work!
-declare type StateValue = boolean | number | string;
-interface State extends Record<string, StateValue | StateValue[] | State> {}
-declare const state: State;
+declare type State = boolean |
+  number |
+  string |
+  (boolean | number | string)[] |
+  Record<string, boolean | number | string>;
+
+declare const state: Record<string, State>;

@@ -456,7 +456,6 @@ declare type Roll20Object<TProperties extends Record<string, any> = Roll20Object
   /* The globally unique ID of this object */
   readonly id: Roll20ObjectProperties["_id"];
 
-  // TODO: Can we conditionally get the return type based on property type in TProperties?
   /* Get the value of the given property of the current object */
   get<T extends string & keyof TProperties>(property: T): TProperties[T];
 
