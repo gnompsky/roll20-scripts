@@ -447,3 +447,19 @@ declare function Campaign(): CampaignObject;
 declare type StateValue = boolean | number | string;
 interface State extends Record<string, StateValue | StateValue[] | State> {}
 declare const state: State;
+
+/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-findObjs(attrs) */
+declare function findObjs(
+  attrs: Partial<PathObjectProperties> | Partial<WindowObjectProperties> | Partial<DoorObjectProperties> | Partial<TextObjectProperties> |
+    Partial<GraphicObjectProperties> | Partial<PageObjectProperties> | Partial<CampaignObjectProperties> | Partial<PlayerObjectProperties> |
+    Partial<MacroObjectProperties> | Partial<RollableTableObjectProperties> | Partial<TableItemObjectProperties> | Partial<CharacterObjectProperties> |
+    Partial<AttributeObjectProperties> | Partial<AbilityObjectProperties> | Partial<HandoutObjectProperties> | Partial<DeckObjectProperties> |
+    Partial<CardObjectProperties> | Partial<HandObjectProperties> | Partial<JukeboxTrackObjectProperties> | Partial<CustomFXObjectProperties>,
+  options?: { caseInsensitive: boolean; }
+): OneOfRoll20Object[];
+
+/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-filterObjs(callback) */
+declare function filterObjs(callback: (obj: OneOfRoll20Object) => boolean): void;
+
+/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-getAllObjs() */
+declare function getAllObjs(): OneOfRoll20Object[];
