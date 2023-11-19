@@ -1,16 +1,29 @@
 ﻿declare type DiceRollModDefinition = {
   /* Comparison type */
-  comp: ">=" | "<=";
+  comp: ">=" | "<=" | "=";
   /* Comparison point */
   point: number;
 };
-declare type DiceRollMods = {
+declare type DiceRollMods = GroupableDiceRollMods & {
   /* Compounding exploding (!!) */
   compounding?: DiceRollModDefinition;
   // TODO: Why can this sometimes be ""? Is this true of all mod types? Does exploding even look like the others?
+  /* Exploding (!) */
   exploding?: DiceRollModDefinition | "";
-  success?: DiceRollModDefinition;
+  // TODO: Add properties for the following types
+  /* Penetrating dice (!p) */
+  /* Matching (m and mt) */
+  /* Rerolling (r and ro) */
+  /* Sorting (s[a] and sd) */
 };
+declare type GroupableDiceRollMods = {
+  /* Target number */
+  success?: DiceRollModDefinition;
+  // TODO: Add properties for the following types
+  /* Failures (f) */
+  /* Keep (k[h] and kl) */
+  /* Drop (dh and d[l]) */
+}
 declare type DiceRollResults = {
   v: number;
 }[];
@@ -29,7 +42,7 @@ declare type LabelDiceRoll = {
 declare type GroupDiceRoll = {
   type: "G";
   rolls: DiceRoll[][];
-  mods: DiceRollMods;
+  mods: GroupableDiceRollMods;
   resultType: "sum" | "success";
   results: DiceRollResults;
 }
