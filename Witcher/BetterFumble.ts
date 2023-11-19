@@ -55,8 +55,8 @@ class BetterFumble implements Mod {
   // TODO: Better typings for inline roll
   private getRollValues(inlineRolls: any[], rollIndex: number) : RollValues {
     const skillRoll = _.filter(inlineRolls, (roll: any) => roll.expression.indexOf("[STAT]") !== -1)[rollIndex];
-    logger(BetterFumble, `Checking roll ${rollIndex}`, "getRollValues");
-    logger(BetterFumble, skillRoll, "getRollValues");
+    logger(BetterFumble, `Checking roll ${rollIndex}`);
+    logger(BetterFumble, skillRoll);
     
     let roll: number | null = null;
     let stat: number | null = null;
@@ -129,7 +129,7 @@ class BetterFumble implements Mod {
     const prefix = isWhisper ? `/w gm ${actor}` : "/me"
 
     const fumbleVal = rawFumbleValue - skill - mod;
-    logger(BetterFumble, `${rawFumbleValue}[FV] - ${skill}[SKILL] - ${mod}[MOD] = ${fumbleVal}`, "calculateAndReportFumble");
+    logger(BetterFumble, `${rawFumbleValue}[FV] - ${skill}[SKILL] - ${mod}[MOD] = ${fumbleVal}`);
 
     if (fumbleVal <= 0) {
       const rollCalc = `[[1[ROLL] + ${stat}[STAT] + ${skill}[SKILL] + (${mod}[MOD])]]`;
@@ -146,7 +146,7 @@ class BetterFumble implements Mod {
 
   private extractRollValuesAndReportFumble(inlineRolls: object[], rollIndex: number, isWhisper: boolean, rollMeta: RollMeta) {
     const rollValues = this.getRollValues(inlineRolls, rollIndex);
-    logger(BetterFumble, rollValues, "extractRollValuesAndReportFumble");
+    logger(BetterFumble, rollValues);
 
     if (rollValues.roll === 1) {
       const rawFumbleValue = this.getFumbleValue(inlineRolls, rollIndex);
@@ -157,7 +157,7 @@ class BetterFumble implements Mod {
   private handleFumble(msg: GeneralMessage | WhisperMessage) {
     const isWhisper = messageIsOneOf(msg, "whisper");
     const rollMeta = this.getRollMeta(msg.content);
-    logger(BetterFumble, `Handling fumble for ${rollMeta.actor} on ${rollMeta.skillName}`, "handleFumble");
+    logger(BetterFumble, `Handling fumble for ${rollMeta.actor} on ${rollMeta.skillName}`);
 
     // Do initial roll regardless of if we're single or double rolling
     this.extractRollValuesAndReportFumble(msg.inlinerolls!, 0, isWhisper, rollMeta);

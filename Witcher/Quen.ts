@@ -9,7 +9,12 @@ class Quen implements Mod<QuenState> {
   private readonly TEMP_BAR_VALUE_PROPERTY = "bar3_value";
   private readonly TEMP_BAR_MAX_PROPERTY = "bar3_max";
 
-  public initialise(): void {}
+  public initialise(): void {
+    const state = getState<Quen, QuenState>(this);
+    if (!state.quenEntities) state.quenEntities = {};
+    
+    logger(Quen, state.quenEntities);
+  }
   public registerEventHandlers(): void {
     on<"graphic">(`change:graphic:${this.HP_BAR_VALUE_PROPERTY}`, _.bind(this.handleHealthChange, this));
     on("chat:message", _.bind(this.handleChatMessage, this));
@@ -20,13 +25,13 @@ class Quen implements Mod<QuenState> {
    */
   private handleChatMessage(msg: Message) {
     if(messageIsOneOf(msg, "general", "whisper") && messageContains(msg, "spell-name=Quen")) {
-      logger(Quen, `Quen has been cast by ${msg.who}`, "handleChatMessage");
+      logger(Quen, `Quen has been cast by ${msg.who}`);
       const staCostRegex = /\{\{cost=(\d+?)}}/;
       const staUsedMatch = msg.content.match(staCostRegex);
       if (!staUsedMatch || staUsedMatch.length < 2) return;
 
       const staUsed = parseInt(staUsedMatch[1], 10);
-      logger(Quen, `STA consumed = ${staUsed}`, "handleChatMessage");
+      logger(Quen, `STA consumed = ${staUsed}`);
       if (staUsed <= 0) return;
 
       // Trigger quen command
@@ -45,11 +50,13 @@ class Quen implements Mod<QuenState> {
       const staUsed = parseInt(args[1], 10);
       const shieldHp = staUsed * 5;
       const selectedToken = getObj("graphic", targetTokenId);
-      logger(Quen, `Applying Quen to ${msg.who}'s token`, "handleChatMessage");
-      logger(Quen, selectedToken, "handleChatMessage");
-      if (!selectedToken) return;
+      if (!selectedToken) {
+        logger(Quen, `ERROR: Token ${targetTokenId} not found!`);
+        return;
+      }
 
       // Store that this character has Quen
+      logger(Quen, `Applying Quen to ${msg.who}'s token '${selectedToken.get("name")}'`);
       this.addQuenTo(selectedToken, shieldHp);
       return;
     }
@@ -74,12 +81,10 @@ class Quen implements Mod<QuenState> {
     const tokenId = token.get("id");
 
     // If this entity is not quened do nothing
-    if (!state.quenEntities || !state.quenEntities[tokenId]){
-      return;
-    }
+    if(!this.hasQuen(token)) return;
 
     // Remove this entity's quen from state
-    delete state.quenEntities[tokenId];
+    state.quenEntities[tokenId] = false;
 
     // Remove aura and tint
     token.set("aura1_radius", "");
@@ -98,19 +103,21 @@ class Quen implements Mod<QuenState> {
    * updated to reflect the temp HP absorbing the hit.
    */
   private handleHealthChange(obj: GraphicObject, prev: GraphicObjectProperties) {
-    logger(Quen, `Detected change in health of ${obj.id}`, "handleHealthChange");
+    if(!this.hasQuen(obj)) return;
+
+    logger(Quen, `Detected change in health of ${obj.get("name")}`);
     
     const prevHpValStr = prev[this.HP_BAR_VALUE_PROPERTY];
     const prevHpVal = typeof prevHpValStr === "string" ? parseInt(prevHpValStr, 10) : prevHpValStr;
     if (isNaN(prevHpVal)) {
-      logger(Quen, `WARN: Previous bar ${this.HP_BAR_ID} does not contain a number: '${prevHpValStr}'`, "handleHealthChange");
+      logger(Quen, `WARN: Previous bar ${this.HP_BAR_ID} does not contain a number: '${prevHpValStr}'`);
       return;
     }
 
     const hpValStr = obj.get(this.HP_BAR_VALUE_PROPERTY);
     const hpVal = typeof hpValStr === "string" ? parseInt(hpValStr, 10) : hpValStr;
     if (isNaN(hpVal)) {
-      logger(Quen, `WARN: Bar ${this.HP_BAR_ID} does not contain a number: '${hpValStr}'`, "handleHealthChange");
+      logger(Quen, `WARN: Bar ${this.HP_BAR_ID} does not contain a number: '${hpValStr}'`);
       return;
     }
 
@@ -119,15 +126,17 @@ class Quen implements Mod<QuenState> {
       const tmpHpVal = typeof tmpHpValStr === "string" ? parseInt(tmpHpValStr, 10) : tmpHpValStr;
       if (!isNaN(tmpHpVal)) {
         const hpChange = prevHpVal - hpVal;
+        sendChat("Quen", `/desc soaked ${Math.min(hpChange, tmpHpVal)} damage for ${obj.get("name")}`);
+        
         const remainingTmp = tmpHpVal - hpChange;
         if (remainingTmp > 0) {
-          logger(Quen, `Quen strength updated, new value = ${remainingTmp}`, "handleHealthChange");
+          logger(Quen, `Quen strength updated, new value = ${remainingTmp}`);
           obj.set(this.TEMP_BAR_VALUE_PROPERTY, remainingTmp);
           obj.set(this.HP_BAR_VALUE_PROPERTY, prevHpVal);
         }
         else {
           const remainingHp = prevHpVal + remainingTmp;
-          logger(Quen, `Quen depleted. ${Math.abs(remainingTmp)} extra damage dealt to HP`, "handleHealthChange");
+          logger(Quen, `Quen depleted. ${Math.abs(remainingTmp)} extra damage dealt to HP`);
           obj.set(this.TEMP_BAR_VALUE_PROPERTY, 0);
           obj.set(this.HP_BAR_VALUE_PROPERTY, remainingHp);
 
@@ -136,6 +145,12 @@ class Quen implements Mod<QuenState> {
         }
       }
     }
+  }
+
+  private hasQuen(token: GraphicObject): boolean {
+    const state = getState<Quen, QuenState>(this);
+    const tokenId = token.get("id");
+    return state.quenEntities.hasOwnProperty(tokenId) && state.quenEntities[tokenId];
   }
 }
 

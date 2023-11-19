@@ -32,6 +32,9 @@
       return;
     }
 
+    if (barVal <= 0) {
+      logger(AutoStatus, `${barProperty} is now empty, ${obj.get("name")} is now ${statusOnEmpty}`);
+    }
     obj.set(`status_${statusOnEmpty}`, barVal <= 0);
 
     if (onEmptyCallback) {
