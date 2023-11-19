@@ -463,3 +463,6 @@ declare function filterObjs(callback: (obj: OneOfRoll20Object) => boolean): void
 
 /* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-getAllObjs() */
 declare function getAllObjs(): OneOfRoll20Object[];
+
+/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-getAttrByName(character_id,attribute_name,value_type) */
+declare function getAttrByName(character_id: ObjectId, attribute_name: string, value_type?: "current" | "max"): string;
