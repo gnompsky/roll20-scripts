@@ -1,5 +1,4 @@
-﻿// noinspection JSUnusedGlobalSymbols
-class QuenState implements State {
+﻿class QuenState implements State {
   Quen: {
     quenedEntities: Record<string, boolean>,
   };
@@ -19,7 +18,7 @@ class Quen {
   }
 
   private setupEventHandlers() {
-    on('change:graphic:' + this.HP_BAR_VALUE_PROPERTY, _.bind(this.handleHealthChange, this));
+    on(`change:graphic:${this.HP_BAR_VALUE_PROPERTY}`, _.bind(this.handleHealthChange, this));
     on("chat:message", _.bind(this.handleChatMessage, this));
   }
 
@@ -45,11 +44,12 @@ class Quen {
      * STA spent
      */
     if(msg.type === "api" && msg.content.indexOf("!quen ") !== -1) {
+      const apiMessage = <ApiMessage>msg;
       const args = msg.content.split(" ");
       const staUsed = parseInt(args[1], 10);
       const shieldHp = staUsed * 5;
-
-      const selectedToken = getObj(ObjTypes.Graphic, msg.selected![0]._id);
+      const selectedToken = getObj("graphic", apiMessage.selected![0].id);
+      if (!selectedToken) return;
 
       // Store that this character has Quen
       this.addQuenTo(selectedToken, shieldHp);

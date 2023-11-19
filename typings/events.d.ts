@@ -1,7 +1,4 @@
-﻿declare function on(event: "chat:message", callback: (msg: ChatMessage) => void): void;
-
-// Campaign Events
-/*
+﻿/*
   This event fires after all the current data for the campaign has been loaded. 
   So if you want to find a list of all objects in a campaign, or a specific object that is already in the Campaign, be sure to only look for it after 
   the ready event fires. In addition, if you bind to add events (such as add:graphic) before the ready event fires, you will receive add events for 
@@ -30,6 +27,10 @@ declare function on(event: "change:campaign:turnorder", callback: () => void): v
  */
 declare function on(event: "change:campaign:initiativepage", callback: () => void): void;
 
-// Object Events
-declare type ChangeGraphicEvent = `change:graphic${`:${keyof GraphicObjectProperties}` | ''}`;
-declare function on(event: ChangeGraphicEvent, callback: (obj: GraphicObject, prev: GraphicObjectProperties) => void): void;
+declare function on(
+  event: `${"add" | "change" | "destroy"}:graphic${`:${keyof GraphicObjectProperties}` | ''}`,
+  callback: (obj: GraphicObject, prev: GraphicObjectProperties) => void
+): void;
+
+
+declare function on(event: "chat:message", callback: (msg: OneOfMessage) => void): void;

@@ -1,4 +1,61 @@
-﻿// TODO: Add docs to each property in these object properties
+﻿declare type OneOfRoll20ObjectProperties = PathObjectProperties | WindowObjectProperties | DoorObjectProperties | TextObjectProperties | 
+  GraphicObjectProperties | PageObjectProperties | CampaignObjectProperties | PlayerObjectProperties | MacroObjectProperties | RollableTableObjectProperties | 
+  TableItemObjectProperties | CharacterObjectProperties | AttributeObjectProperties | AbilityObjectProperties | HandoutObjectProperties | DeckObjectProperties |
+  CardObjectProperties | HandObjectProperties | JukeboxTrackObjectProperties | CustomFXObjectProperties;
+declare type OneOfRoll20Object = PathObject | WindowObject | DoorObject | TextObject | GraphicObject | PageObject | CampaignObject | PlayerObject | 
+  MacroObject | RollableTableObject | TableItemObject | CharacterObject | AttributeObject | AbilityObject | HandoutObject | DeckObject | CardObject | 
+  HandObject | JukeboxTrackObject | CustomFXObject;
+declare type Roll20ObjectType = `${OneOfRoll20ObjectProperties["_type"]}`;
+declare type CreateableRoll20ObjectTypes = GraphicObjectProperties["_type"] | TextObjectProperties["_type"] | PathObjectProperties["_type"] | 
+  CharacterObjectProperties["_type"] | AbilityObjectProperties["_type"] | AttributeObjectProperties["_type"] | HandoutObjectProperties["_type"] |
+  RollableTableObjectProperties["_type"] | TableItemObjectProperties["_type"] | MacroObjectProperties["_type"];
+
+declare interface Roll20ObjectTypeMap extends Record<string, OneOfRoll20Object> {
+  readonly path: PathObject;
+  readonly window: WindowObject;
+  readonly door: DoorObject;
+  readonly text: TextObject;
+  readonly graphic: GraphicObject;
+  readonly page: PageObject;
+  readonly campaign: CampaignObject;
+  readonly player: PlayerObject;
+  readonly macro: MacroObject;
+  readonly rollabletable: RollableTableObject;
+  readonly tableitem: TableItemObject;
+  readonly character: CharacterObject;
+  readonly attribute: AttributeObject;
+  readonly ability: AbilityObject;
+  readonly handout: HandoutObject;
+  readonly deck: DeckObject;
+  readonly card: CardObject;
+  readonly hand: HandObject;
+  readonly jukeboxtrack: JukeboxTrackObject;
+  readonly customfx: CustomFXObject;
+}
+declare interface Roll20ObjectPropertiesTypeMap extends Record<string, OneOfRoll20ObjectProperties> {
+  readonly path: PathObjectProperties;
+  readonly window: WindowObjectProperties;
+  readonly door: DoorObjectProperties;
+  readonly text: TextObjectProperties;
+  readonly graphic: GraphicObjectProperties;
+  readonly page: PageObjectProperties;
+  readonly campaign: CampaignObjectProperties;
+  readonly player: PlayerObjectProperties;
+  readonly macro: MacroObjectProperties;
+  readonly rollabletable: RollableTableObjectProperties;
+  readonly tableitem: TableItemObjectProperties;
+  readonly character: CharacterObjectProperties;
+  readonly attribute: AttributeObjectProperties;
+  readonly ability: AbilityObjectProperties;
+  readonly handout: HandoutObjectProperties;
+  readonly deck: DeckObjectProperties;
+  readonly card: CardObjectProperties;
+  readonly hand: HandObjectProperties;
+  readonly jukeboxtrack: JukeboxTrackObjectProperties;
+  readonly customfx: CustomFXObjectProperties;
+}
+
+// TODO: Add docs to each property in these object properties
 /* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-Path */
 declare type PathObjectProperties = Roll20ObjectProperties & {
   readonly _type: "path";
@@ -393,76 +450,21 @@ declare type CustomFXObject = Roll20Object<CustomFXObjectProperties>;
 declare type Roll20ObjectProperties = {
   id: ObjectId;
   _id: ObjectId;
-  _type: "path" | "window" | "door" | "text" | "graphic" | "page" | "campaign" | "player" | "macro" | "rollabletable" | "tableitem" | "character" | 
-    "attribute" | "ability" | "handout" | "deck" | "card" | "hand" | "jukeboxtrack";
   _pageid: ObjectId;
 }
 declare type Roll20Object<TProperties extends Record<string, any> = Roll20ObjectProperties> = {
   /* The globally unique ID of this object */
   readonly id: Roll20ObjectProperties["_id"];
 
-  /* Get the globally unique ID of this object. This is identical to {@link id} */
-  get(property: "_id"): TProperties["_id"];
-  /* Get the type of the current object */
-  get(property: "_type"): TProperties["_type"];
-
   // TODO: Can we conditionally get the return type based on property type in TProperties?
   /* Get the value of the given property of the current object */
-  get(property: keyof TProperties): string;
+  get<T extends string & keyof TProperties>(property: T): TProperties[T];
 
   // TODO: Do we need to exclude other readonly properties from TProperties here?
   // TODO: This doesn't seem to omit any of the properties we don't want for some reason
   /* Set the value of the given property of the current object */
-  set(property: Omit<keyof TProperties, "id" | "_id" | "_type" | "_pageid">, value: string): void;
+  set<T extends string & Omit<keyof TProperties, "id" | "_id" | "_type" | "_pageid">>(property: T, value: TProperties[T]): void;
 
   /* Set multiple values on the current object */
   set(newData: TProperties): void;
-};
-
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-createObj(type,attributes) */
-declare function createObj(type: "graphic", attributes: GraphicObjectProperties): GraphicObject;
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-createObj(type,attributes) */
-declare function createObj(type: "text", attributes: TextObjectProperties): TextObject;
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-createObj(type,attributes) */
-declare function createObj(type: "path", attributes: PathObjectProperties): PathObject;
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-createObj(type,attributes) */
-declare function createObj(type: "character", attributes: CharacterObjectProperties): CharacterObject;
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-createObj(type,attributes) */
-declare function createObj(type: "ability", attributes: AbilityObjectProperties): AbilityObject;
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-createObj(type,attributes) */
-declare function createObj(type: "attribute", attributes: AttributeObjectProperties): AttributeObject;
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-createObj(type,attributes) */
-declare function createObj(type: "handout", attributes: HandoutObjectProperties): HandoutObject;
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-createObj(type,attributes) */
-declare function createObj(type: "rollabletable", attributes: RollableTableObjectProperties): RollableTableObject;
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-createObj(type,attributes) */
-declare function createObj(type: "tableitem", attributes: TableItemObjectProperties): TableItemObject;
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-createObj(type,attributes) */
-declare function createObj(type: "macro", attributes: MacroObjectProperties): MacroObject;
-
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-Campaign()(function) */
-declare function Campaign(): CampaignObject;
-
-// TODO: This needs work!
-declare type StateValue = boolean | number | string;
-interface State extends Record<string, StateValue | StateValue[] | State> {}
-declare const state: State;
-
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-findObjs(attrs) */
-declare function findObjs(
-  attrs: Partial<PathObjectProperties> | Partial<WindowObjectProperties> | Partial<DoorObjectProperties> | Partial<TextObjectProperties> |
-    Partial<GraphicObjectProperties> | Partial<PageObjectProperties> | Partial<CampaignObjectProperties> | Partial<PlayerObjectProperties> |
-    Partial<MacroObjectProperties> | Partial<RollableTableObjectProperties> | Partial<TableItemObjectProperties> | Partial<CharacterObjectProperties> |
-    Partial<AttributeObjectProperties> | Partial<AbilityObjectProperties> | Partial<HandoutObjectProperties> | Partial<DeckObjectProperties> |
-    Partial<CardObjectProperties> | Partial<HandObjectProperties> | Partial<JukeboxTrackObjectProperties> | Partial<CustomFXObjectProperties>,
-  options?: { caseInsensitive: boolean; }
-): OneOfRoll20Object[];
-
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-filterObjs(callback) */
-declare function filterObjs(callback: (obj: OneOfRoll20Object) => boolean): void;
-
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-getAllObjs() */
-declare function getAllObjs(): OneOfRoll20Object[];
-
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-getAttrByName(character_id,attribute_name,value_type) */
-declare function getAttrByName(character_id: ObjectId, attribute_name: string, value_type?: "current" | "max"): string;
+}

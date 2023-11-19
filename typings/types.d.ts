@@ -2,7 +2,7 @@
   dummy: never;
 }
 
-declare type CssColor = "transparent" | `#${number}`;
+declare type CssColor = "transparent" | `#${string}`;
 declare type Point = { x: number; y: number; };
 declare type LayerName = "gmlayer" | "objects" | "map" | "walls";
 declare type ObjectId = string;
@@ -19,7 +19,3 @@ declare type MarkerType = "red" | "blue" | "green" | "brown" | "purple" | "pink"
 
 declare type EffectType = ""; // TODO: Dynamically build this? All except beam-color, breath-color, splatter-color
 declare type DirectionalEffectType = EffectType | "";  // TODO: Dynamically build this?
-
-declare type OneOfRoll20Object = PathObject | WindowObject | DoorObject | TextObject | GraphicObject | PageObject | CampaignObject | PlayerObject | MacroObject |
-  RollableTableObject | TableItemObject | CharacterObject | AttributeObject | AbilityObject | HandoutObject | DeckObject | CardObject | HandObject |
-  JukeboxTrackObject | CustomFXObject;
