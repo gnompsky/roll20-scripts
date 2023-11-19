@@ -58,7 +58,7 @@
   }
 }
 
-let AutoStatusInstance = new AutoStatus();
+const AutoStatusInstance = new AutoStatus();
 
 on("ready", () => {
   AutoStatusInstance.init();
