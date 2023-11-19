@@ -27,9 +27,9 @@ declare function on(event: "change:campaign:turnorder", callback: () => void): v
  */
 declare function on(event: "change:campaign:initiativepage", callback: () => void): void;
 
-declare function on(
-  event: `${"add" | "change" | "destroy"}:graphic${`:${keyof GraphicObjectProperties}` | ''}`,
-  callback: (obj: GraphicObject, prev: GraphicObjectProperties) => void
+declare function on<T extends string & Roll20ObjectType>(
+  event: `${"add" | "change" | "destroy"}:${T}${`:${string & keyof (Roll20ObjectPropertiesTypeMap[T])}` | ""}`,
+  callback: (obj: Roll20ObjectTypeMap[T], prev: Roll20ObjectPropertiesTypeMap[T]) => void
 ): void;
 
 

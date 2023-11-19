@@ -18,7 +18,7 @@ class Quen {
   }
 
   private setupEventHandlers() {
-    on(`change:graphic:${this.HP_BAR_VALUE_PROPERTY}`, _.bind(this.handleHealthChange, this));
+    on<"graphic">(`change:graphic:${this.HP_BAR_VALUE_PROPERTY}`, _.bind(this.handleHealthChange, this));
     on("chat:message", _.bind(this.handleChatMessage, this));
   }
 
