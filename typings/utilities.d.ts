@@ -3,7 +3,7 @@
   Useful for debugging your scripts and getting a better handle on what's going on inside the API sandbox.
   @see https://help.roll20.net/hc/en-us/articles/360037256774-API-Utility-Functions#API:UtilityFunctions-Logging
  */
-declare function log(message: string): void;
+declare function log(message: any): void;
 
 /*
   These two functions will move an object on the tabletop to the front of layer it is currently on. 
