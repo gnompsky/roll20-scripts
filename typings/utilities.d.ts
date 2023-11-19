@@ -36,14 +36,14 @@ declare function randomInteger(max: number): number;
   accordingly without any need to clear a cache or restart the API sandbox.
   @see https://help.roll20.net/hc/en-us/articles/360037256774-API-Utility-Functions#API:UtilityFunctions-PlayerIsGM
  */
-declare function playerIsGM(playerId: NotImplemented): boolean;
+declare function playerIsGM(playerId: ObjectId): boolean;
 
 /*
   Sets the default token for the supplied Character Object to the details of the supplied Token Object. Both objects must already exist. 
   This will overwrite any default token currently associated with the character.
   @see https://help.roll20.net/hc/en-us/articles/360037256774-API-Utility-Functions#API:UtilityFunctions-Character
  */
-declare function setDefaultTokenForCharacter(character: NotImplemented, token: NotImplemented): void;
+declare function setDefaultTokenForCharacter(character: CharacterObject, token: GraphicObject): void;
 
 /*
   Spawns a brief effect at the location at x,y of type. If you omit the pageId or pass 'undefined', then the page the players 
@@ -57,7 +57,7 @@ declare function setDefaultTokenForCharacter(character: NotImplemented, token: N
   For custom effects, type should be the ID of the custfx object for the custom effect.
   @see https://help.roll20.net/hc/en-us/articles/360037256774-API-Utility-Functions#API:UtilityFunctions-SpecialEffects(FX)
  */
-declare function spawnFx(x: number, y: number, type: EffectType, pageId: NotImplemented): void;
+declare function spawnFx(x: number, y: number, type: EffectType, pageId: ObjectId): void;
 
 /*
   Works the same as spawnFx, but instead of a single point you pass in two points, in the format {x: 100, y: 100}. 

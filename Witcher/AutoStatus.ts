@@ -1,4 +1,4 @@
-﻿class AutoStatus extends Mod {
+﻿class AutoStatus implements Mod {
   private readonly HP_BAR_ID = 1;
   private readonly HP_BAR_PROPERTY = "bar1_value";
   private readonly STA_BAR_ID = 2;
@@ -22,7 +22,7 @@
     prev: GraphicObjectProperties,
     barId: typeof this.HP_BAR_ID | typeof this.STA_BAR_ID,
     barProperty: typeof this.HP_BAR_PROPERTY | typeof this.STA_BAR_PROPERTY,
-    statusOnEmpty: string,
+    statusOnEmpty: MarkerType,
     onEmptyCallback?: (obj: GraphicObject) => void
   ) {
     const barValStr = obj.get(barProperty);

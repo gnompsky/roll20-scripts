@@ -1,34 +1,44 @@
-abstract class Mod<TState extends State = {}> {   
-  public initialiseState(): void {
-    if (!state.hasOwnProperty(this.constructor.name) || !state[this.constructor.name]) state[this.constructor.name] = {};
-  }
-  
-  protected getState(): TState {
-    return <TState>state[this.constructor.name];
-  }
-  
-  protected log(message: any): void {
-    message = typeof message === "string" ? message : JSON.stringify(message);
-    log(`[MOD - ${this.constructor.name}] ${message}`);
-  }
+declare type Mod<TState extends StateValue = boolean> = {
+  initialise(): void;
+  registerEventHandlers(): void;
+};
 
-  public abstract initialise(): void;
-  public abstract registerEventHandlers(): void;
+function logger<TMod extends Mod>(type: { new(): TMod}, message: any, functionName?: string) {
+  const functionNameOrEmpty = functionName ? `${functionName}: ` : logger.caller || "";
+  const encodedMessage = typeof message === "string" ? message : JSON.stringify(message);
+  log(`[${type.name}] ${functionNameOrEmpty}${encodedMessage}`);
 }
 
-function registerMod<TMod extends Mod<TState>, TState extends State = {}>(type: { new(): TMod} ) {
-  const _log = (message: string) => {
-    log(`[MOD - ${type.name}] ${message}`);
-  };
-  
-  _log("Instantiating");
-  const instance = new type();
+function registerMod<TMod extends Mod<TState>, TState extends StateValue = {}>(modType: { new(): TMod} ) {
+  logger(modType, "Instantiating");
+  const instance = new modType();
 
   on('ready',function() {
-    _log("initialise()");
+    logger(modType, "setupState()");
+    if (!state.hasOwnProperty(modType.name) || !state[modType.name]) state[modType.name] = <TState>{};
+    
+    logger(modType, "initialise()");
     instance.initialise();
 
-    _log("registerEventHandlers()");
+    logger(modType, "registerEventHandlers()");
     instance.registerEventHandlers();
   });
+}
+
+// TODO: Why can't we infer TState???!?!!?!?
+function getState<
+  TMod extends Mod<TState>,
+  TState extends StateValue = TMod extends Mod<infer T> ? T : never
+>(mod: TMod): TState {
+  return <TState>state[mod.constructor.name];
+}
+
+function messageIsApiCommand(message: OneOfMessage, commandPrefix: string, expectArguments: boolean = true): boolean {
+  return messageIsOneOf(message, "api") && message.content.startsWith(`!${commandPrefix}${expectArguments ? " " : ""}`);
+}
+function messageIsOneOf(message: OneOfMessage, ...types: OneOfMessage["type"][]): boolean {
+  return types.indexOf(message.type) !== -1;
+}
+function messageContains(message: OneOfMessage, substring: string): boolean {
+  return message.content.indexOf(substring) !== -1;
 }

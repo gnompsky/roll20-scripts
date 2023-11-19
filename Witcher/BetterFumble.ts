@@ -11,12 +11,12 @@ type RollValues = {
 };
 
 /* Implements Fumble rules by Spirited-dark */
-class BetterFumble extends Mod {
+class BetterFumble implements Mod {
   public initialise(): void {}
   public registerEventHandlers(): void {
     on("chat:message", (msg) => {
-      const isFumbleMessage = (msg.type === "general" || msg.type === "whisper") &&
-        (msg.content.indexOf("{{fumble=") !== -1) &&
+      const isFumbleMessage = messageIsOneOf(msg, "general", "whisper") &&
+        messageContains(msg, "{{fumble=") &&
         (msg.rolltemplate === "singleroll" || msg.rolltemplate === "doubleroll" || msg.rolltemplate === "mainskill");
 
       if (isFumbleMessage) {
@@ -55,7 +55,9 @@ class BetterFumble extends Mod {
   // TODO: Better typings for inline roll
   private getRollValues(inlineRolls: any[], rollIndex: number) : RollValues {
     const skillRoll = _.filter(inlineRolls, (roll: any) => roll.expression.indexOf("[STAT]") !== -1)[rollIndex];
-
+    logger(BetterFumble, `Checking roll ${rollIndex}`, "getRollValues");
+    logger(BetterFumble, skillRoll, "getRollValues");
+    
     let roll: number | null = null;
     let stat: number | null = null;
     let skill: number | null = null;
@@ -127,6 +129,7 @@ class BetterFumble extends Mod {
     const prefix = isWhisper ? `/w gm ${actor}` : "/me"
 
     const fumbleVal = rawFumbleValue - skill - mod;
+    logger(BetterFumble, `${rawFumbleValue}[FV] - ${skill}[SKILL] - ${mod}[MOD] = ${fumbleVal}`, "calculateAndReportFumble");
 
     if (fumbleVal <= 0) {
       const rollCalc = `[[1[ROLL] + ${stat}[STAT] + ${skill}[SKILL] + (${mod}[MOD])]]`;
@@ -143,6 +146,8 @@ class BetterFumble extends Mod {
 
   private extractRollValuesAndReportFumble(inlineRolls: object[], rollIndex: number, isWhisper: boolean, rollMeta: RollMeta) {
     const rollValues = this.getRollValues(inlineRolls, rollIndex);
+    logger(BetterFumble, rollValues, "extractRollValuesAndReportFumble");
+
     if (rollValues.roll === 1) {
       const rawFumbleValue = this.getFumbleValue(inlineRolls, rollIndex);
       this.calculateAndReportFumble(isWhisper, rollMeta, rollValues, rawFumbleValue);
@@ -150,8 +155,9 @@ class BetterFumble extends Mod {
   }
 
   private handleFumble(msg: GeneralMessage | WhisperMessage) {
-    const isWhisper = msg.type === "whisper";
+    const isWhisper = messageIsOneOf(msg, "whisper");
     const rollMeta = this.getRollMeta(msg.content);
+    logger(BetterFumble, `Handling fumble for ${rollMeta.actor} on ${rollMeta.skillName}`, "handleFumble");
 
     // Do initial roll regardless of if we're single or double rolling
     this.extractRollValuesAndReportFumble(msg.inlinerolls!, 0, isWhisper, rollMeta);

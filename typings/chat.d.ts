@@ -10,7 +10,10 @@ declare type WhisperMessage = Message & {
 };
 declare type DescMessage = Message;
 declare type ApiMessage = Message & {
-  readonly selected: OneOfRoll20Object[];
+  readonly selected: {
+    readonly _id: ObjectId;
+    readonly _type: Roll20ObjectType;
+  }[];
 };
 declare type Message = {
   readonly type: "general" | "rollresult" | "gmrollresult" | "emote" | "whisper" | "desc" | "api";
