@@ -86,7 +86,7 @@ class Quen implements Mod<Quen.State> {
     if(!this.hasQuen(token)) return;
 
     // Remove this entity's quen from state
-    state.quenEntities[tokenId] = false;
+    delete state.quenEntities[tokenId];
 
     // Remove aura and tint
     token.set("aura1_radius", "");

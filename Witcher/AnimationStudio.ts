@@ -1,18 +1,13 @@
-﻿import KeyFrame = AnimationStudio.KeyFrame;
-
-module AnimationStudio {
+﻿module AnimationStudio {
   export type State = {
     animations: Record<AnimationKey, AnimationDefinition>;
-    inProduction: {
-      key: AnimationKey;
-      definition: AnimationDefinition;
-    } | null;
   }
 
   export type AnimationKey = `${ObjectId}.${string}`;
   
   export type AnimationDefinition = {
     fps: number;
+    loop: boolean;
     frames: KeyFrame[];
   }
   
@@ -22,12 +17,12 @@ module AnimationStudio {
 }
 
 class AnimationStudio implements Mod<AnimationStudio.State> {
+  private readonly _playing: Record<AnimationStudio.AnimationKey, NodeJS.Timeout | null> = {};
+  private _inProduction: { key: AnimationStudio.AnimationKey, definition: AnimationStudio.AnimationDefinition } | null = null;
+  
   public initialise(): void {
     const state = this.getState();
     if (!state.animations) state.animations = {};
-    
-    // We won't support continuing across sessions for now so just clear any previously in production animation
-    state.inProduction = null;
 
     logger(AnimationStudio, "Stored animations: " + Object.keys(state.animations).length);
   }
@@ -50,11 +45,18 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
     
     switch (true) {
       case (command === "list"): return this.handleListCommand(msg, commandArgs.length >= 1 ? commandArgs[0] : undefined);
-      case (command === "record" && commandArgs.length >= 2): return this.handleRecordCommand(msg, commandArgs[0], parseInt(commandArgs[1], 10));
-      case (command === "addframe" && !!this.getState().inProduction): return this.handleAddFrame(msg);
-      case (command === "deleteframe" && !!this.getState().inProduction): return this.handleDeleteFrame(msg);
-      case (command === "save" && !!this.getState().inProduction): return this.handleSaveAnimation(msg);
+      case (command === "record" && commandArgs.length >= 2): 
+        return this.handleRecordCommand(
+          msg, 
+          commandArgs[0], 
+          parseInt(commandArgs[1], 10), 
+          commandArgs.length >= 3 && commandArgs[2].toLowerCase() === "true" // Default to false
+        );
+      case (command === "addframe" && !!this._inProduction): return this.handleAddFrame(msg);
+      case (command === "deleteframe" && !!this._inProduction): return this.handleDeleteFrame(msg);
+      case (command === "save" && !!this._inProduction): return this.handleSaveAnimation(msg);
       case (command === "play" && commandArgs.length >= 1): return this.handlePlayCommand(msg, commandArgs[0]);
+      case (command === "stop" && commandArgs.length >= 1): return this.handleStopCommand(msg, commandArgs[0]);
       case (command === "delete" && commandArgs.length >= 1): return this.handleDeleteCommand(msg, commandArgs[0]);
       default: return logger(AnimationStudio, `ERROR: Unknown subcommand '${args[1]}'`);
     }
@@ -72,8 +74,8 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
     
     let message = `/w gm &{template:default} {{name=Animation Studio
 }} {{[List (this page)](!animation list)=[List (all pages)](!animation list all)
-}} {{[New](!animation record ?{Animation name} ?{FPS|1})=[Play](!animation play ?{Animation|${animationList}})
-}} {{[Delete (from this page)](!animation delete ?{Animation|${animationList}})=
+}} {{[New](!animation record ?{Animation name} ?{FPS|1} ?{Loop?|No,false|Yes,true})=[Delete (from this page)](!animation delete ?{Animation|${animationList}})
+}} {{[Play](!animation play ?{Animation|${animationList}})=[Stop](!animation stop ?{Animation|${animationList}})
 }}`;
     
     sendChat(msg.who, message);
@@ -97,14 +99,15 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
     sendChat(msg.who, message);
   }
   
-  private handleRecordCommand(msg: ApiMessage, animationName: string, fps: number): void {
+  private handleRecordCommand(msg: ApiMessage, animationName: string, fps: number, loop: boolean): void {
       const pageId = this.getPageId(msg);
       const page = this.getPage(pageId);
       
-      this.getState().inProduction = {
+      this._inProduction = {
         key: `${pageId}.${animationName}`,
         definition: {
           fps,
+          loop,
           frames: []
         }
       };
@@ -114,9 +117,10 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
   }
   
   private handleAddFrame(msg: ApiMessage): void {
-    const anim = this.getState().inProduction!.definition;
+    const anim = this._inProduction?.definition;
+    if (!anim) return;
     
-    const newFrame: KeyFrame = {
+    const newFrame: AnimationStudio.KeyFrame = {
       objectProperties: {}
     };
     msg.selected?.forEach((s) => {
@@ -140,7 +144,9 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
   }
   
   private handleDeleteFrame(msg: ApiMessage): void {
-    const anim = this.getState().inProduction!.definition;
+    const anim = this._inProduction?.definition;
+    if (!anim) return;
+
     if (anim.frames.length === 0) return sendChat(msg.who, "/w gm No frames to delete");
     
     anim.frames.pop();
@@ -149,11 +155,13 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
   }
   
   private handleSaveAnimation(msg: ApiMessage): void {
+    if (!this._inProduction) return;
+    
     const state = this.getState();
-    const { key, definition } = state.inProduction!;
+    const { key, definition } = this._inProduction;
     
     state.animations[key] = Object.assign({}, definition);
-    state.inProduction = null;
+    this._inProduction = null;
     
     sendChat(msg.who, `/w gm Animation '${key.split(".")[1]}' saved`);
   }
@@ -164,24 +172,12 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
     const animation = state.animations[key];
     if (!animation) return sendChat(msg.who, `/w gm Animation '${animationName}' not found`);
 
-    let currentFrame = 0;
-    const interval: NodeJS.Timeout = setInterval(
-      // Run the next frame of the animation...
-      function() {
-        if (currentFrame >= animation.frames.length) return clearInterval(interval);
-        
-        const frame = animation.frames[currentFrame];
-        _.forEach(frame.objectProperties, (props, id) => {
-          const graphic = getObj("graphic", id)!;
-          if (graphic.get("_subtype") !== "token") return;
+    this.playAnimation(key, animation);
+  }
   
-          graphic.set(props);
-        });
-        currentFrame++;
-      },
-      // ...at the animation's FPS
-      Math.floor(1000 / animation.fps)
-    );
+  private handleStopCommand(msg: ApiMessage, animationName: string): void {
+    const key: AnimationStudio.AnimationKey = `${this.getPageId(msg)}.${animationName}`;
+    this.stopAnimation(key);
   }
   
   private handleDeleteCommand(msg: ApiMessage, animationName: string): void {
@@ -190,12 +186,15 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
 
     if (!state.animations[key]) return sendChat(msg.who, `/w gm Animation '${animationName}' not found`);
     
+    this.stopAnimation(key);
     delete state.animations[key];
+    delete this._playing[key];
     sendChat(msg.who, `/w gm Animation '${animationName}' deleted`);
   }
   
   private renderRecordMenu(msg: ApiMessage): void {
-    const animation = this.getState().inProduction!.definition;
+    const animation = this._inProduction?.definition;
+    if (!animation) return;
     
     const message = `/w gm &{template:default} {{name=Recording animation
 }} {{Current frame=${animation.frames.length + 1}
@@ -204,6 +203,39 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
 }}`;
     
     sendChat(msg.who, message);
+  }
+  
+  private playAnimation(key: AnimationStudio.AnimationKey, animation: AnimationStudio.AnimationDefinition) {
+    // Capture the stop function so we don't have to pass a context around
+    const stopThisAnimation = _.bind(() => this.stopAnimation(key), this);
+    stopThisAnimation();
+
+    let currentFrame = 0;
+    this._playing[key] = setInterval(
+      // Run the next frame of the animation...
+      function() {
+        if (currentFrame >= animation.frames.length) {
+          if (animation.loop) currentFrame = 0;
+          else return stopThisAnimation();
+        }
+
+        const frame = animation.frames[currentFrame];
+        _.forEach(frame.objectProperties, (props, id) => {
+          const graphic = getObj("graphic", id)!;
+          if (graphic.get("_subtype") !== "token") return;
+
+          graphic.set(props);
+        });
+        currentFrame++;
+      },
+      // ...at the animation's FPS
+      Math.floor(1000 / animation.fps)
+    );
+  }
+  private stopAnimation(key: AnimationStudio.AnimationKey) {
+    const interval = this._playing[key];
+    if (interval) clearInterval(interval);
+    this._playing[key] = null;
   }
 
   private getAnimationKeysForThisPage(msg: ApiMessage, allPages: boolean): AnimationStudio.AnimationKey[] {
@@ -224,12 +256,57 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
     return getState<AnimationStudio, AnimationStudio.State>(this);
   }
   
-  private static readonly graphicProperties: (keyof GraphicObjectProperties)[] = ["imgsrc", "left", "top", "width", "height", "rotation", "layer", "flipv", 
-    "fliph", "name", "bar1_value", "bar2_value", "bar3_value", "bar1_max", "bar2_max", "bar3_max", "aura1_radius", "aura2_radius", "aura1_color", "aura2_color",
-    "aura1_square", "aura2_square", "tint_color", "statusmarkers", "token_markers", "showname", "showplayers_name", "showplayers_bar1", "showplayers_bar2", 
-    "showplayers_bar3", "showplayers_aura1", "showplayers_aura2", "playersedit_name", "playersedit_bar1", "playersedit_bar2", "playersedit_bar3", 
-    "playersedit_aura1", "playersedit_aura2", "light_radius", "light_dimradius", "light_otherplayers", "light_hassight", "light_angle", "light_losangle", 
-    "light_multiplier", "adv_fow_view_distance", "light_sensitivity_multiplier", "night_vision_effect", "bar_location", "compact_bar"];
+  private static readonly graphicProperties: (keyof GraphicObjectProperties)[] = [
+    "left",
+    "top",
+    "width",
+    "height",
+    "rotation",
+    "layer",
+    "flipv",
+    "fliph",
+    "name",
+    "bar1_value",
+    "bar2_value",
+    "bar3_value",
+    "bar1_max",
+    "bar2_max",
+    "bar3_max",
+    "aura1_radius",
+    "aura2_radius",
+    "aura1_color",
+    "aura2_color",
+    "aura1_square",
+    "aura2_square",
+    "tint_color",
+    "statusmarkers",
+    "token_markers",
+    "showname",
+    "showplayers_name",
+    "showplayers_bar1",
+    "showplayers_bar2",
+    "showplayers_bar3",
+    "showplayers_aura1",
+    "showplayers_aura2",
+    "playersedit_name",
+    "playersedit_bar1",
+    "playersedit_bar2",
+    "playersedit_bar3",
+    "playersedit_aura1",
+    "playersedit_aura2",
+    "light_radius",
+    "light_dimradius",
+    "light_otherplayers",
+    "light_hassight",
+    "light_angle",
+    "light_losangle",
+    "light_multiplier",
+    "adv_fow_view_distance",
+    "light_sensitivity_multiplier",
+    "night_vision_effect",
+    "bar_location",
+    "compact_bar"
+  ];
 }
 
 registerMod(AnimationStudio);
