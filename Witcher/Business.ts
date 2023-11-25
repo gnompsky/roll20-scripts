@@ -21,7 +21,7 @@ class Business implements Mod {
     const msg = <ApiMessage>m;
     const args = msg.content.split(" ");
     
-    const command = args[1].toLowerCase();
+    const command = args.length > 1 ? args[1].toLowerCase() : false;
 
     switch (true){
       case command === "income" && args.length > 2: return this.handleCommandIncome(
@@ -44,7 +44,7 @@ class Business implements Mod {
         args.length < 3 ? 20 : +args[2], 
         args.length < 4 ? "none" : <Business.BusinessType>args[3]
       );
-      // TODO: default: return this.handleRenderMenu(msg);
+      default: return this.handleRenderMenu(msg);
     }
   }
 
@@ -201,6 +201,17 @@ class Business implements Mod {
 }} {{Next Chance=${newChance}%
 }}`;
 
+    sendChat(who, message);
+  }
+  
+  private handleRenderMenu({ who }: ApiMessage): void {
+    const message = `/w gm &{template:default} {{name=Business
+}} {{[Income](!
+#Business-Income)=[Tax](!
+#Business-Tax)
+}} {{[Event](!
+#Business-Event)=
+}}`;
     sendChat(who, message);
   }
   
