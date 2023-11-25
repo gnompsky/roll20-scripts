@@ -45,3 +45,20 @@ function messageContains(message: OneOfMessage, substring: string): boolean {
 function getAttrByNameAsInt(character_id: ObjectId, attribute_name: string, value_type?: "current" | "max"): number {
   return parseInt(getAttrByName(character_id, attribute_name, value_type), 10);
 }
+
+function pickFromList<T>(list: T[]): T {
+  return _.sample(list, 1)[0];
+}
+
+type PickableTable = {
+  min?: number;
+  /* If omitted, the roll must match minOrExact exactly to be picked */
+  max?: number;
+  exact?: number;
+}
+function pickFromTable<T extends PickableTable>(table: T[], diceSize: number) {
+  const roll = randomInteger(diceSize);
+  return Object.assign({}, table.find(x => {
+    return x.exact === roll || (x.min && x.max && x.min <= roll && x.max >= roll);
+  }));
+}
