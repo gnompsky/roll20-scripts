@@ -472,7 +472,7 @@ declare type Roll20Object<TProperties extends Record<string, any> = Roll20Object
 declare function Campaign(): CampaignObject;
 
 /* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-createObj(type,attributes) */
-declare function createObj<T extends string & CreateableRoll20ObjectTypes>(type: T, attributes: Roll20ObjectPropertiesTypeMap[T]): Roll20ObjectTypeMap;
+declare function createObj<T extends string & CreateableRoll20ObjectTypes>(type: T, attributes: Partial<Roll20ObjectPropertiesTypeMap[T]>): Roll20ObjectTypeMap[T];
 
 /* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-filterObjs(callback) */
 declare function filterObjs(predicate: (obj: OneOfRoll20Object) => boolean): OneOfRoll20Object[];
@@ -491,7 +491,7 @@ declare function findObjs(
 declare function getAllObjs(): OneOfRoll20Object[];
 
 /* @see https://help.roll20.net/hc/en-us/articles/360037772793-API-Objects#API:Objects-getAttrByName(character_id,attribute_name,value_type) */
-declare function getAttrByName(character_id: ObjectId, attribute_name: string, value_type?: "current" | "max"): string;
+declare function getAttrByName(character_id: ObjectId, attribute_name: string, value_type?: "current" | "max"): string | undefined;
 
 /* @see https://help.roll20.net/hc/en-us/articles/360037772833-API-Function-Documentation#API:FunctionDocumentation-getObj */
 declare function getObj<T extends string & Roll20ObjectType>(type: T, id: ObjectId): Roll20ObjectTypeMap[T] | undefined;

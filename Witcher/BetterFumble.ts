@@ -13,7 +13,7 @@
   
   export type ResolvedFumble = {
     rollMeta: RollMeta,
-    rollValues: RollValues,
+    rollValues?: RollValues,
     rawFumbleValue: number,
     rollIndex?: number
   };
@@ -58,7 +58,7 @@ class BetterFumble implements Mod {
     const resolvedFumble = this._templateHandlers[msg.rolltemplate](meta, rolls);
 
     _.forEach(resolvedFumble, (fumble) => {
-      if (fumble.rollValues.roll !== 1) return;
+      if (fumble.rollValues?.roll !== 1) return;
       this.calculateAndReportFumble(msg, fumble);
     });
   }
@@ -68,7 +68,7 @@ class BetterFumble implements Mod {
     {rollMeta, rollValues, rawFumbleValue, rollIndex}: BetterFumble.ResolvedFumble,
   ) {
     const { actor, skillName } = rollMeta;
-    const { stat, skill, mod } = rollValues;
+    const { stat, skill, mod } = rollValues!;
     const chatPrefix = messageIsOneOf(msg, "whisper")
       ? `/w gm`
       : "/me";
@@ -185,14 +185,20 @@ class BetterFumble implements Mod {
     inlineRolls: InlineRoll[],
     rollLabels: { stat?: string, skill?: string, skillBase?: string },
     rollIndex: number = 0
-  ) : BetterFumble.RollValues {
+  ) : BetterFumble.RollValues | undefined {
     // Look for a roll that has ALL of the labels we've been provided
     const skillRoll = _.filter(inlineRolls, (roll) => Object.values(rollLabels)
       .filter(l => l.length)
       .every((label) => label && roll.expression.indexOf(`[${label}]`) !== -1)
     )[rollIndex];
     logger(BetterFumble, `Checking roll ${rollIndex}`);
-    logger(BetterFumble, skillRoll);
+    if (skillRoll) {
+      logger(BetterFumble, skillRoll);
+    } else {
+      logger(BetterFumble, `[ERROR] No roll found with labels ${JSON.stringify(rollLabels)}`);
+      logger(BetterFumble, inlineRolls);
+      return;
+    }
     
     let roll: number | null = null;
     let stat: number | null = null;
@@ -254,11 +260,17 @@ class BetterFumble implements Mod {
   // TODO: This is only required because we have no [SKILLBASE] label on the attack roll in the template :(
   private getNpcWeaponRollValues(
     inlineRolls: InlineRoll[]
-  ) : BetterFumble.RollValues {
+  ) : BetterFumble.RollValues | undefined {
     // Look for a roll that has ALL of the labels we've been provided
     const skillRoll = _.filter(inlineRolls, (roll) => roll.expression.indexOf(`[MOD]`) !== -1)[0];
-    logger(BetterFumble, `Checking roll 0`);
-    logger(BetterFumble, skillRoll);
+    logger(BetterFumble, `Checking roll 0}`);
+    if (skillRoll) {
+      logger(BetterFumble, skillRoll);
+    } else {
+      logger(BetterFumble, '[ERROR] No roll found with label "[MOD]"');
+      logger(BetterFumble, inlineRolls);
+      return;
+    }
 
     let roll: number | null = null;
     let stat: number | null = null;
