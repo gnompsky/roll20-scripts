@@ -104,7 +104,7 @@
     this.handleAdrenalineChange(attribute);
 
     // Send a notification to chat that includes the die roll
-    sendChat(who, "/me spent an adrenaline die for [[1d10]]!");
+    sendChat(who, "/me spent an adrenaline die for [[1d10]]! This can be added to a single attack's damage, a single roll or added as temporary HP.");
   }
 
   private handleAdrenalineChange(obj: AttributeObject) {

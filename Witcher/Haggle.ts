@@ -40,10 +40,10 @@
 
     const selectedCharacterIntStat = getAttrByNameAsInt(tokenRepresents, "total_int");
     const selectedCharacterIntMod = getAttrByNameAsInt(tokenRepresents, "intstatsum");
-    const int = selectedCharacterIntStat + selectedCharacterIntMod;
+    const int = (selectedCharacterIntStat || 0) + (selectedCharacterIntMod || 0);
     const selectedCharacterBusinessSkill = getAttrByNameAsInt(tokenRepresents, "business");
     const selectedCharacterBusinessSkillMod = getAttrByNameAsInt(tokenRepresents, "businesssum");
-    const business = selectedCharacterBusinessSkill + selectedCharacterBusinessSkillMod;
+    const business = (selectedCharacterBusinessSkill || 0) + (selectedCharacterBusinessSkillMod || 0);
 
     const businessRoll = this.rollBusiness(int, business);
     const beatDcBy = businessRoll.value - dc;
