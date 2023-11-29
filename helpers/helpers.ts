@@ -67,3 +67,31 @@ function pickFromTable<T extends PickableTable>(table: T[], diceSize: number) {
     return x.exact === roll || (x.min && x.max && x.min <= roll && x.max >= roll);
   }));
 }
+
+type TurnOrder = {
+  /* 
+    The ID of the Graphic object. 
+    If this is set, the turn order list will automatically pull the name and icon for the list based on the graphic on the tabletop.
+   */
+  "id": ObjectId | "-1",
+  /* The current value for the item in the list. Can be a number or text. */
+  "pr": string | `${number}`;
+  /* Custom title for the item. Will be ignored if ID is set to a value other than "-1". */
+  "custom": string | undefined;
+  /* The Page ID for this item. Currently this should always equal Campaign().get("initiativepage"). */
+  "_pageid": ObjectId;
+}[];
+function getTurnOrder(): TurnOrder {
+  const turnOrder = Campaign().get('turnorder');
+  return !turnOrder.length
+    ? []
+    : Array.from(JSON.parse(turnOrder)) as TurnOrder;
+}
+function getPrevTurnOrder(prev: CampaignObjectProperties) {
+  return !prev.turnorder.length
+    ? []
+    : Array.from(JSON.parse(prev.turnorder)) as TurnOrder;
+}
+function setTurnOrder(turnOrder: TurnOrder) {
+  Campaign().set('turnorder', JSON.stringify(turnOrder));
+}
