@@ -128,7 +128,7 @@ declare type TextObjectProperties = Roll20ObjectProperties & {
   color: `rgb(${number},${" " | ""}${number},${" " | ""}${number})`;
   font_family: string;
   layer: LayerName;
-  controlledBy: PlayerList;
+  controlledby: PlayerList;
 };
 /* @see https://help.roll20.net/hc/en-us/articles/360037772793-API:Objects-Text */
 declare type TextObject = Roll20Object<TextObjectProperties> & {
@@ -158,7 +158,7 @@ declare type GraphicObjectProperties = Roll20ObjectProperties & {
   fliph: boolean;
   name: string;
   gmnotes: string;
-  controlledBy: PlayerList;
+  controlledby: PlayerList;
   bar1_value: string | number;
   bar2_value: string | number;
   bar3_value: string | number;

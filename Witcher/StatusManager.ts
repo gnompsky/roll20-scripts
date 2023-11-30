@@ -62,20 +62,26 @@ class StatusManager implements Mod<StatusManager.State> {
   private handleChatMessage(m: OneOfMessage) {
     if(!messageIsApiCommand(m, "status", false)) return;
     const msg = <ApiMessage>m;
-    
+
+    const selectedToken = getObj("graphic", msg.selected[0]._id)!;
+    if (!playerControls(selectedToken, msg.playerid)) {
+      this.sendToCaller(msg, `you do not control the selected token (${selectedToken.get("name")})`);
+      return;
+    }
+
     const args = _.rest(msg.content.split(" "));
     if (!args.length || !args[0].length) return this.sendMenu(msg);
 
     const command = args[0].toLowerCase();
 
     if (!msg.selected?.length) {
-      sendChat(msg.who, "/w gm you must select a token to manage its status");
+      this.sendToCaller(msg, "you must select a token to manage its status");
       return;
     }
 
     const statusString = args.length >= 2 ? args[1].toLowerCase() : undefined;
     if (!statusString || !StatusManager.statusMap.hasOwnProperty(statusString)) {
-      sendChat(msg.who, `/w gm "${statusString}" is not a recognised status effect`);
+      this.sendToCaller(msg, `"${statusString}" is not a recognised status effect`);
       return;
     }
 
@@ -83,7 +89,6 @@ class StatusManager implements Mod<StatusManager.State> {
       ? <StatusManager.StatusLocation[]>args.slice(2).filter(l => l.length) 
       : [];
     
-    const selectedToken = getObj("graphic", msg.selected[0]._id)!;
     const status = statusString as StatusManager.Status;
 
     logger(StatusManager, `Attempting to ${command} status ${status} to token ${selectedToken.get("name")}`);
@@ -92,7 +97,7 @@ class StatusManager implements Mod<StatusManager.State> {
       case StatusManager.CMD_ADD: return this.addStatus(msg, selectedToken, status, locationKeys);
       case StatusManager.CMD_REMOVE: return this.removeStatus(msg, selectedToken, status);
       // TODO: case StatusManager.CMD_TOGGLE: return this.toggleStatus(selectedToken, status, locationKeys);
-      default: return sendChat(msg.who, `/w gm unrecognised command "${command}"`);
+      default: return this.sendToCaller(msg, `unrecognised command "${command}"`);
     }
   }
 
@@ -154,7 +159,7 @@ class StatusManager implements Mod<StatusManager.State> {
     }
     
     return this.sendMenu(msg);
-  };
+  }
 
   private removeStatus(msg: ApiMessage | undefined, token: GraphicObject, statusName: StatusManager.Status) {
     const status = StatusManager.statusMap[statusName];
@@ -242,11 +247,10 @@ class StatusManager implements Mod<StatusManager.State> {
   }
   
   private sendMenu(msg: ApiMessage) {
-    const target = playerIsGM(msg.playerid) ? "gm" : getObj("player", msg.playerid)!.get("_displayname");
     const selectedToken = msg.selected.length ? getObj("graphic", msg.selected[0]._id) : undefined;
     const tokenName = selectedToken ? selectedToken.get("name") : "Unknown";
     
-    let message = `/w ${target} &{template:default} {{name=Adjust status for ${tokenName}
+    let message = `&{template:default} {{name=Adjust status for ${tokenName}
 }}`;
     
     _.each(StatusManager.statusMap, (status, statusNameString) => {
@@ -295,7 +299,7 @@ class StatusManager implements Mod<StatusManager.State> {
 }}`;
     });
     
-    sendChat(msg.who, message);
+    this.sendToCaller(msg, message);
   }
   
   private getTokenStateMeta(token: GraphicObject) {
@@ -314,6 +318,11 @@ class StatusManager implements Mod<StatusManager.State> {
 
   private getState(): StatusManager.State {
     return getState<StatusManager, StatusManager.State>(this);
+  }
+  
+  private sendToCaller(msg: OneOfMessage, message: string) {
+    const target = getObj("player", msg.playerid)!.get("_displayname");
+    sendChat("System", `/w "${target}" ${message}`);
   }
   
   private static readonly statusMap: Record<StatusManager.Status, StatusManager.StatusDefinition> = {

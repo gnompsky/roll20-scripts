@@ -95,3 +95,10 @@ function getPrevTurnOrder(prev: CampaignObjectProperties) {
 function setTurnOrder(turnOrder: TurnOrder) {
   Campaign().set('turnorder', JSON.stringify(turnOrder));
 }
+
+function playerControls(token: Roll20Object<{ controlledby: PlayerList }>, playerId: ObjectId): boolean {
+  if (playerIsGM(playerId)) return true;
+  const controlledBy = token.get("controlledby");
+  if (controlledBy === "all") return true;
+  return controlledBy.split(",").indexOf(playerId) !== -1;
+}
