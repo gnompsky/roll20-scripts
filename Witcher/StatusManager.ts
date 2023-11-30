@@ -26,14 +26,9 @@
   };
 }
 
-//TODO: Remove/Add should be able to amend locations
-//TODO: Toggle command
-//TODO: Markers not applying
 class StatusManager implements Mod<StatusManager.State> {
   private static readonly CMD_ADD = "add";
   private static readonly CMD_REMOVE = "remove";
-  private static readonly CMD_TOGGLE = "toggle";
-  private static readonly CMD_CLEAR_ALL = "clear";
   
   public initialise(): void {
     const state = this.getState();
@@ -65,17 +60,13 @@ class StatusManager implements Mod<StatusManager.State> {
   }
   
   private handleChatMessage(m: OneOfMessage) {
-    if(!messageIsApiCommand(m, "status")) return;
+    if(!messageIsApiCommand(m, "status", false)) return;
     const msg = <ApiMessage>m;
     
     const args = _.rest(msg.content.split(" "));
-    const command = args.length >= 1 ? args[0].toLowerCase() : undefined;
-    if (!command) return sendChat(msg.who, `/w gm missing command`);
+    if (!args.length || !args[0].length) return this.sendMenu(msg);
 
-    if (command === StatusManager.CMD_CLEAR_ALL) {
-      // TODO: this.clearAllStatuses();
-      return;
-    }
+    const command = args[0].toLowerCase();
 
     if (!msg.selected?.length) {
       sendChat(msg.who, "/w gm you must select a token to manage its status");
@@ -98,14 +89,14 @@ class StatusManager implements Mod<StatusManager.State> {
     logger(StatusManager, `Attempting to ${command} status ${status} to token ${selectedToken.get("name")}`);
     
     switch (command) {
-      case StatusManager.CMD_ADD: return this.addStatus(selectedToken, status, locationKeys);
-      case StatusManager.CMD_REMOVE: return this.removeStatus(selectedToken, status);
+      case StatusManager.CMD_ADD: return this.addStatus(msg, selectedToken, status, locationKeys);
+      case StatusManager.CMD_REMOVE: return this.removeStatus(msg, selectedToken, status);
       // TODO: case StatusManager.CMD_TOGGLE: return this.toggleStatus(selectedToken, status, locationKeys);
       default: return sendChat(msg.who, `/w gm unrecognised command "${command}"`);
     }
   }
 
-  private addStatus(token: GraphicObject, statusName: StatusManager.Status, locations: StatusManager.StatusLocation[]) {
+  private addStatus(msg: ApiMessage, token: GraphicObject, statusName: StatusManager.Status, locations: StatusManager.StatusLocation[]) {
     const status = StatusManager.statusMap[statusName];
     const tokenName = token.get("name");
     
@@ -116,7 +107,7 @@ class StatusManager implements Mod<StatusManager.State> {
     logger(StatusManager, `Set ${statusProperty}="${token.get(statusProperty)}" for ${tokenName}`);
 
     const tokenStateMeta = this.getTokenStateMeta(token);
-    let existingStatus = tokenStateMeta.find(x => x.status === statusName);
+    let existingStatus = this.getTokenAppliedState(token, statusName, tokenStateMeta);
 
     // If we already have this status and it's not location targetable, we'll do nothing here
     if (!!existingStatus && !existingStatus.locationTargetable) {
@@ -158,12 +149,14 @@ class StatusManager implements Mod<StatusManager.State> {
         : [existingStatus.replaces];
       _.each(statusesToReplace, s => {
         logger(StatusManager, `Removing ${s} from ${tokenName} because it is replaced by ${statusName}`);
-        this.removeStatus(token, s);
+        this.removeStatus(undefined, token, s);
       });
     }
+    
+    return this.sendMenu(msg);
   };
 
-  private removeStatus(token: GraphicObject, statusName: StatusManager.Status) {
+  private removeStatus(msg: ApiMessage | undefined, token: GraphicObject, statusName: StatusManager.Status) {
     const status = StatusManager.statusMap[statusName];
     
     const statusProperty: `status_${MarkerType}${"" | "marker"}` = `status_${status.marker}`;
@@ -171,12 +164,14 @@ class StatusManager implements Mod<StatusManager.State> {
     logger(StatusManager, `Set ${statusProperty}=false for ${token.get("name")}`);
 
     let tokenStateMeta = this.getTokenStateMeta(token);
-    const statusToRemove = tokenStateMeta.find(x => x.status === statusName);
+    const statusToRemove = this.getTokenAppliedState(token, statusName, tokenStateMeta)
     if (!statusToRemove) return;
     
     logger(StatusManager, `Removing ${statusName} from ${token.get("name")}`);
     tokenStateMeta = _.without(tokenStateMeta, statusToRemove);
     this.setTokenStateMeta(token, tokenStateMeta);
+    
+    if (msg) return this.sendMenu(msg);
   }
   
   private buildStatusDisplay(token: GraphicObject, meta: StatusManager.StatusMeta[]) {
@@ -191,7 +186,7 @@ class StatusManager implements Mod<StatusManager.State> {
         if (typeof status.duration === "number") {
           if (status.duration <= 1) {
             logger(StatusManager, `Duration of ${status.status} on ${token.get("name")} has expired. Removing`);
-            this.removeStatus(token, status.status);
+            this.removeStatus(undefined, token, status.status);
 
             return message + "Cleared }}";
           } else {
@@ -246,9 +241,71 @@ class StatusManager implements Mod<StatusManager.State> {
     return message;
   }
   
+  private sendMenu(msg: ApiMessage) {
+    const target = playerIsGM(msg.playerid) ? "gm" : getObj("player", msg.playerid)!.get("_displayname");
+    const selectedToken = msg.selected.length ? getObj("graphic", msg.selected[0]._id) : undefined;
+    const tokenName = selectedToken ? selectedToken.get("name") : "Unknown";
+    
+    let message = `/w ${target} &{template:default} {{name=Adjust status for ${tokenName}
+}}`;
+    
+    _.each(StatusManager.statusMap, (status, statusNameString) => {
+      type StatusOption = { name: string, command: string };
+      type LocationStatusOption = StatusOption & {
+        command: `${typeof StatusManager.CMD_ADD} ${StatusManager.Status} ${StatusManager.StatusLocation}`;
+        location: StatusManager.StatusLocation;
+      };
+      
+      const statusName = statusNameString as StatusManager.Status;
+      const tokenAppliedState = this.getTokenAppliedState(selectedToken!, statusName);
+      const hasStatus = !!tokenAppliedState;
+      const isLocationTargetable = status.locationTargetable;
+      
+      const locationOptions: LocationStatusOption[] = [
+        { name: "Apply to Head", command: `${StatusManager.CMD_ADD} ${statusName} head`, location: "head" },
+        { name: "Apply to Torso", command: `${StatusManager.CMD_ADD} ${statusName} torso`, location: "torso" },
+        { name: "Apply to L. Arm", command: `${StatusManager.CMD_ADD} ${statusName} larm`, location: "larm" },
+        { name: "Apply to R. Arm", command: `${StatusManager.CMD_ADD} ${statusName} rarm`, location: "rarm" },
+        { name: "Apply to L. Leg", command: `${StatusManager.CMD_ADD} ${statusName} lleg`, location: "lleg" },
+        { name: "Apply to R. Leg", command: `${StatusManager.CMD_ADD} ${statusName} rleg`, location: "rleg" },
+      ];
+      const addOption: StatusOption = { name: "Apply", command: `${StatusManager.CMD_ADD} ${statusName}` };
+      const clearOption: StatusOption = { name: "Clear", command: `${StatusManager.CMD_REMOVE} ${statusName}` };
+
+      const options: { name: string, command: string }[] = []; 
+      switch(true) {
+        case hasStatus && isLocationTargetable:
+          options.push(clearOption);
+          options.push(..._.filter(locationOptions, option => !tokenAppliedState!.locations[option.location]));
+          break;
+        case hasStatus && !isLocationTargetable:
+          options.push(clearOption);
+          break;
+        case !hasStatus && isLocationTargetable:
+          options.push(...locationOptions);
+          break;
+        case !hasStatus && !isLocationTargetable:
+          options.push(addOption);
+          break;
+      }
+      
+      const optionsStr = _.map(options, option => `[${option.name}](!status ${option.command})`).join(`
+`);
+      message += ` {{${status.name}=${optionsStr}
+}}`;
+    });
+    
+    sendChat(msg.who, message);
+  }
+  
   private getTokenStateMeta(token: GraphicObject) {
     const meta = this.getState().meta;
     return meta.hasOwnProperty(token.id) ? meta[token.id] : [];
+  }
+  
+  private getTokenAppliedState(token: GraphicObject, state: StatusManager.Status, tokenStateMeta?: StatusManager.StatusMeta[]) {
+    tokenStateMeta = tokenStateMeta || this.getTokenStateMeta(token);
+    return tokenStateMeta.find(x => x.status === state);
   }
 
   private setTokenStateMeta(token: GraphicObject, newMeta: StatusManager.StatusMeta[]) {
