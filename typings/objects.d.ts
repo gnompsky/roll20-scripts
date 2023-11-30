@@ -136,7 +136,8 @@ declare type TextObject = Roll20Object<TextObjectProperties> & {
   remove(): void;
 };
 
-/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API:Objects-Text */
+// TODO: Need to update this to account for new dynamic lighting props
+/* @see https://help.roll20.net/hc/en-us/articles/360037772793-API:Objects-Graphic */
 declare type GraphicObjectProperties = Roll20ObjectProperties & {
   readonly _type: "graphic";
   readonly _subtype: "token" | "card";

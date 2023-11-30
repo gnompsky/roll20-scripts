@@ -5,7 +5,8 @@
     }
   };
   
-  export type Status = "fire" | "stun" | "poison" | "bleed" | "freeze" | "staggered" | "intoxication" | "hallucination" | "nausea" | "suffocation" | "blinded";
+  export type Status = "fire" | "stun" | "poison" | "bleed" | "freeze" | "staggered" | "intoxication" | "hallucination" | "nausea" | "suffocation" | "blinded" |
+    "prone" | "grappled" | "pinned";
   export type StatusLocation = "head" | "torso" | "larm" | "rarm" | "lleg" | "rleg";
   export type StatusMeta = StatusDefinition & {
     status: Status;
@@ -87,12 +88,14 @@ class StatusManager implements Mod<StatusManager.State> {
     }
 
     const locationKeys = args.length >= 3 
-      ? <StatusManager.StatusLocation[]>args.slice(2) 
+      ? <StatusManager.StatusLocation[]>args.slice(2).filter(l => l.length) 
       : [];
     
     const selectedToken = getObj("graphic", msg.selected[0]._id)!;
     const status = statusString as StatusManager.Status;
 
+    logger(StatusManager, `Attempting to ${command} status ${status} to token ${selectedToken.get("name")}`);
+    
     switch (command) {
       case StatusManager.CMD_ADD: return this.addStatus(selectedToken, status, locationKeys);
       case StatusManager.CMD_REMOVE: return this.removeStatus(selectedToken, status);
@@ -103,23 +106,26 @@ class StatusManager implements Mod<StatusManager.State> {
 
   private addStatus(token: GraphicObject, statusName: StatusManager.Status, locations: StatusManager.StatusLocation[]) {
     const status = StatusManager.statusMap[statusName];
-
+    const tokenName = token.get("name");
+    
     // TODO: Not sure how to show locations?
-    token.set(
-      `status_${status.marker}`, 
-      typeof status.duration === "undefined" ? true : status.duration
-    );
+    const statusProperty: `status_${MarkerType}${"" | "marker"}` = `status_${status.marker}`;
+    const statusValue = typeof status.duration === "undefined" ? true : status.duration;
+    token.set(statusProperty, statusValue);
+    logger(StatusManager, `Set ${statusProperty}="${token.get(statusProperty)}" for ${tokenName}`);
 
     const tokenStateMeta = this.getTokenStateMeta(token);
     let existingStatus = tokenStateMeta.find(x => x.status === statusName);
 
     // If we already have this status and it's not location targetable, we'll do nothing here
-    if (!existingStatus?.locationTargetable) {
+    if (!!existingStatus && !existingStatus.locationTargetable) {
+      logger(StatusManager, `Token ${tokenName} already has status ${statusName}. Nothing to do here`);
       return;
     }
     
     // If we don't have the status, add it
     if (!existingStatus) {
+      logger(StatusManager, `Token ${tokenName} does not have status ${statusName}. Adding it`);
       existingStatus = {
         ...status,
         status: statusName,
@@ -137,6 +143,7 @@ class StatusManager implements Mod<StatusManager.State> {
     
     // Now iterate over affected locations (if applicable) and set them to true
     if (existingStatus.locationTargetable) {
+      logger(StatusManager, `Applying ${statusName} to ${tokenName}'s ${locations.join(", ")}`);
       _.forEach(locations, location => {
         existingStatus!.locations[location] = true;
       });
@@ -147,13 +154,16 @@ class StatusManager implements Mod<StatusManager.State> {
 
   private removeStatus(token: GraphicObject, statusName: StatusManager.Status) {
     const status = StatusManager.statusMap[statusName];
-
-    token.set(status.marker, false);
+    
+    const statusProperty: `status_${MarkerType}${"" | "marker"}` = `status_${status.marker}`;
+    token.set(statusProperty, false);
+    logger(StatusManager, `Set ${statusProperty}=false for ${token.get("name")}`);
 
     let tokenStateMeta = this.getTokenStateMeta(token);
     const statusToRemove = tokenStateMeta.find(x => x.status === statusName);
     if (!statusToRemove) return;
     
+    logger(StatusManager, `Removing ${statusName} from ${token.get("name")}`);
     tokenStateMeta = _.without(tokenStateMeta, statusToRemove);
     this.setTokenStateMeta(token, tokenStateMeta);
   }
@@ -169,10 +179,12 @@ class StatusManager implements Mod<StatusManager.State> {
         // Decrement duration if applicable
         if (typeof status.duration === "number") {
           if (status.duration <= 1) {
+            logger(StatusManager, `Duration of ${status.status} on ${token.get("name")} has expired. Removing`);
             this.removeStatus(token, status.status);
 
             return message + "Cleared }}";
           } else {
+            logger(StatusManager, `Decrementing duration of ${status.status} on ${token.get("name")} from ${status.duration} to ${status.duration - 1}`);
             status.duration--;
             token.set(`status_${status.marker}`, status.duration);
           }
@@ -230,6 +242,7 @@ class StatusManager implements Mod<StatusManager.State> {
 
   private setTokenStateMeta(token: GraphicObject, newMeta: StatusManager.StatusMeta[]) {
     this.getState().meta[token.id] = newMeta;
+    logger(StatusManager, newMeta);
   }
 
   private getState(): StatusManager.State {
@@ -237,54 +250,50 @@ class StatusManager implements Mod<StatusManager.State> {
   }
   
   private static readonly statusMap: Record<StatusManager.Status, StatusManager.StatusDefinition> = {
-    "fire": {
+    /* Effects (p.161) */
+    fire: {
       name: "On Fire",
       marker: "half-haze",
       damagePerRound: 5,
-      duration: -1,
       clearInstructions: "Whole turn to pour water or stop, drop and roll",
       armourSoaks: true,
       locationTargetable: true
     },
-    "stun": {
+    stun: {
       name: "Stunned",
       marker: "sleepy",
       damagePerRound: 0,
       description: "DC: 10 to hit you.",
-      duration: -1,
       clearInstructions: "Stun save (takes whole round) or get hit",
       armourSoaks: false,
       locationTargetable: false
     },
-    "poison": {
+    poison: {
       name: "Poisoned",
       marker: "skull",
       damagePerRound: 3,
-      duration: -1,
       clearInstructions: "DC 15 Endurance check (1 action)",
       armourSoaks: false,
       locationTargetable: false
     },
-    "bleed": {
+    bleed: {
       name: "Bleeding",
-      marker: "bleeding-eye",
+      marker: "half-heart",
       damagePerRound: 2,
-      duration: -1,
       clearInstructions: "Healing spell or DC 15 First Aid check (1 action)",
       armourSoaks: false,
       locationTargetable: true
     },
-    "freeze": {
+    freeze: {
       name: "Frozen",
       marker: "frozen-orb",
       damagePerRound: 0,
       description: "-3 SPD, -1 REF",
-      duration: -1,
       clearInstructions: "DC 16 Physique check (1 action)",
       armourSoaks: false,
       locationTargetable: false
     },
-    "staggered": {
+    staggered: {
       name: "Staggered",
       marker: "lightning-helix",
       damagePerRound: 0,
@@ -293,55 +302,78 @@ class StatusManager implements Mod<StatusManager.State> {
       armourSoaks: false,
       locationTargetable: false
     },
-    "intoxication": {
+    intoxication: {
       name: "Intoxicated",
       marker: "drink-me",
       damagePerRound: 0,
       description: "-2 REF,DEX,INT, -3 Verbal Combat, 25% amnesia",
-      duration: -1,
       clearInstructions: "Sleep it off or White Honey",
       armourSoaks: false,
       locationTargetable: false
     },
-    "hallucination": {
+    hallucination: {
       name: "Hallucinating",
       marker: "aura",
       damagePerRound: 0,
       description: "GM free rein to make visions up",
-      duration: -1,
       clearInstructions: "DC 15 Deduction to recognise each false image",
       armourSoaks: false,
       locationTargetable: false
     },
-    "nausea": {
+    nausea: {
       name: "Nauseous",
       marker: "yellow",
       damagePerRound: 0,
-      description: "Every 3 rounds roll uner BODY or spend round throwing up",
-      duration: -1,
+      description: "Every 3 rounds roll under BODY or spend round throwing up",
       clearInstructions: "Sleep it off",
       armourSoaks: false,
       locationTargetable: false
     },
-    "suffocation": {
+    suffocation: {
       name: "Suffocating",
       marker: "ninja-mask",
       damagePerRound: 3,
-      duration: -1,
       clearInstructions: "Restore air supply",
       armourSoaks: false,
       locationTargetable: false
     },
-    "blinded": {
+    blinded: {
       name: "Blinded",
-      marker: "broken-skull",
+      marker: "bleeding-eye",
       damagePerRound: 0,
       description: "-3 Att/Def, -5 sight-based Awareness",
-      duration: -1,
       clearInstructions: "Turn to clear your eyes",
       armourSoaks: false,
       locationTargetable: false
-    }
+    },
+    /* Combat Statuses (p. 163) */
+    prone: {
+      name: "Prone",
+      marker: "back-pain",
+      damagePerRound: 0,
+      description: "-2 Att/Def",
+      clearInstructions: "Move action to stand, after which you may use remaining action to move as normal",
+      armourSoaks: false,
+      locationTargetable: false
+    },
+    grappled: {
+      name: "Grappled",
+      marker: "fishing-net",
+      damagePerRound: 0,
+      description: "-2 to physical actions",
+      clearInstructions: "Dodge/escape vs. original attack roll",
+      armourSoaks: false,
+      locationTargetable: false
+    },
+    pinned: {
+      name: "Pinned",
+      marker: "arrowed",
+      damagePerRound: 0,
+      description: "-2 to physical actions. Cannot move.",
+      clearInstructions: "Dodge/escape vs. original attack roll",
+      armourSoaks: false,
+      locationTargetable: false
+    },
   };
 }
 
