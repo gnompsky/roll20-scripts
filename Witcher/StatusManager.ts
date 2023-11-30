@@ -19,9 +19,10 @@
     description?: string;
     damagePerRound?: number;
     duration?: number;
-    clearInstructions?: string,
-    armourSoaks: boolean,
-    locationTargetable: boolean
+    clearInstructions?: string;
+    armourSoaks: boolean;
+    locationTargetable: boolean;
+    replaces?: Status[] | Status;
   };
 }
 
@@ -148,8 +149,18 @@ class StatusManager implements Mod<StatusManager.State> {
         existingStatus!.locations[location] = true;
       });
     }
-    
+
     this.setTokenStateMeta(token, tokenStateMeta);
+    
+    if (existingStatus.replaces) {
+      const statusesToReplace = _.isArray(existingStatus.replaces) 
+        ? existingStatus.replaces 
+        : [existingStatus.replaces];
+      _.each(statusesToReplace, s => {
+        logger(StatusManager, `Removing ${s} from ${tokenName} because it is replaced by ${statusName}`);
+        this.removeStatus(token, s);
+      });
+    }
   };
 
   private removeStatus(token: GraphicObject, statusName: StatusManager.Status) {
@@ -242,7 +253,6 @@ class StatusManager implements Mod<StatusManager.State> {
 
   private setTokenStateMeta(token: GraphicObject, newMeta: StatusManager.StatusMeta[]) {
     this.getState().meta[token.id] = newMeta;
-    logger(StatusManager, newMeta);
   }
 
   private getState(): StatusManager.State {
@@ -372,7 +382,8 @@ class StatusManager implements Mod<StatusManager.State> {
       description: "-2 to physical actions. Cannot move.",
       clearInstructions: "Dodge/escape vs. original attack roll",
       armourSoaks: false,
-      locationTargetable: false
+      locationTargetable: false,
+      replaces: "grappled",
     },
   };
 }
