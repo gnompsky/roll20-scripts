@@ -15,7 +15,14 @@ class PathHelper {
     return "Unknown";
   }
   
-  public tryGetPointWithinPolygon(): Point | undefined {
+  public tryGetPointWithinPath(): Point | undefined {
+    switch(this.getPathType()) {
+      case "Polygonal": return this.tryGetPointWithinPolygon();
+      case "Oval": return this.getPointWithinOval();
+    }
+  }
+  
+  private tryGetPointWithinPolygon(): Point | undefined {
     if (this.getPathType() !== "Polygonal") throw new Error("Path is not a polygon");
     const path = this.getPathDefinition<PolygonPathDefinition>();
     
@@ -43,6 +50,18 @@ class PathHelper {
         return randomPoint;
       }
     }
+  }
+  
+  private getPointWithinOval(): Point {
+    const phi = Math.random() * ((2 * Math.PI) + 1);
+    const rho = Math.random();
+    const width = this.path.get("width");
+    const height = this.path.get("height");
+
+    return {
+      x: (Math.sqrt(rho) * Math.cos(phi) * width / 2.0) + (width / 2.0),
+      y: (Math.sqrt(rho) * Math.sin(phi) * height / 2.0) + (height / 2.0),
+    };
   }
   
   private getPathDefinition<T extends OneOfPathDefinition = OneOfPathDefinition>(): T {

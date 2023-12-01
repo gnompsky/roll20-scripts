@@ -38,19 +38,13 @@
     return this.stopBombardment(msg.selected[0]._id);
   }
   
-  private selectHitPoint(target: PathObject): Point | undefined {
-    const path = new PathHelper(target);
-    
-    switch(path.getPathType()) {
-      case "Polygonal": return path.tryGetPointWithinPolygon();
-    }
-  }
-  
   private startBombardment(target: PathObject, interval: number) {
     this.stopBombardment(target.id);
 
+    const pathHelper = new PathHelper(target);
+    
     this._inProgress[target.id] = setInterval(() => {
-      const point = this.selectHitPoint(target);
+      const point = pathHelper.tryGetPointWithinPath();
       if (!point) return logger(SiegeTools, "Failed to resolve point for bombardment");
       
       // Top, Left is the centre point of the polygon. We need to offset by half the width/height of the polygon, and then scale.
