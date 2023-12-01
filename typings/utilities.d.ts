@@ -57,7 +57,7 @@ declare function setDefaultTokenForCharacter(character: CharacterObject, token: 
   For custom effects, type should be the ID of the custfx object for the custom effect.
   @see https://help.roll20.net/hc/en-us/articles/360037256774-API-Utility-Functions#API:UtilityFunctions-SpecialEffects(FX)
  */
-declare function spawnFx(x: number, y: number, type: EffectType, pageId: ObjectId): void;
+declare function spawnFx(x: number, y: number, type: EffectType, pageId?: ObjectId): void;
 
 /*
   Works the same as spawnFx, but instead of a single point you pass in two points, in the format {x: 100, y: 100}. 
@@ -68,7 +68,7 @@ declare function spawnFx(x: number, y: number, type: EffectType, pageId: ObjectI
   The following effect types must always use spawnFxBetweenPoints instead of spawnFx: beam-color, breath-color, splatter-color
   @see https://help.roll20.net/hc/en-us/articles/360037256774-API-Utility-Functions#API:UtilityFunctions-SpecialEffects(FX)
  */
-declare function spawnFxBetweenPoints(point1: Point, point2: Point, type: EffectType, pageId: NotImplemented): void;
+declare function spawnFxBetweenPoints(point1: Point, point2: Point, type: DirectionalEffectType, pageId: ObjectId): void;
 
 /*
   Spawns an ad-hoc custom effect using the JSON for some effect definition at the location x,y. 
@@ -77,14 +77,14 @@ declare function spawnFxBetweenPoints(point1: Point, point2: Point, type: Effect
   definitionJSON is a javascript object following the JSON specification for {@link https://help.roll20.net/hc/en-us/articles/360037258714 Custom FX}.
   @see https://help.roll20.net/hc/en-us/articles/360037256774-API-Utility-Functions#API:UtilityFunctions-SpecialEffects(FX)
  */
-declare function spawnFxWithDefinition(x: number, y: number, definitionJSON: NotImplemented, pageId: NotImplemented): void;
+declare function spawnFxWithDefinition(x: number, y: number, definitionJSON: CustomFxDefinition, pageId: ObjectId): void;
 
 /*
   The play function takes in the Folder ID (get it from the "_jukeboxfolder" property in the Campaign object) of the playlist, 
   and will begin playing that playlist for everyone in the game.
   @see https://help.roll20.net/hc/en-us/articles/360037256774-API-Utility-Functions#API:UtilityFunctions-JukeboxPlaylists
  */
-declare function playJukeboxPlaylist(playlistId: NotImplemented): void;
+declare function playJukeboxPlaylist(playlistId: ObjectId): void;
 
 /*
   The stop function does not require any arguments, and will stop any playlist that is currently playing.
@@ -101,12 +101,15 @@ declare function stopJukeboxPlaylist(): void;
   You can set the player IDs in visibleTo for the players who can see or be moved by the ping. This is presented as a single player ID, an array, 
   or a comma-delimited string.
   @see https://help.roll20.net/hc/en-us/articles/360037256774-API-Utility-Functions#API:UtilityFunctions-Miscellaneous
+  @param visibleTo Specifies one or more players that will receive the ping. 
+    If at least one player is specified, no other players will see the ping or be moved.
+    If sending multiple IDs, they can be included either as an array, or as a comma-delimited text string.
  */
 declare function sendPing(
   left: number,
   top: number,
-  pageId: NotImplemented,
-  playerId?: NotImplemented,
+  pageId: ObjectId,
+  playerId?: ObjectId,
   moveAll?: boolean,
-  visibleTo?: NotImplemented | NotImplemented[] | string
+  visibleTo?: ObjectId | ObjectId[] | string,
 ): void;
