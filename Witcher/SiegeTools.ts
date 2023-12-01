@@ -42,6 +42,11 @@
     this.stopBombardment(target.id);
 
     const pathHelper = new PathHelper(target);
+    const pathType = pathHelper.getPathType();
+    if (pathType !== "Polygonal" && pathType !== "Oval") {
+      sendChat("", `/w gm Bombardment cannot be started on a ${pathType} path`);
+      return;
+    }
     
     this._inProgress[target.id] = setInterval(() => {
       const point = pathHelper.tryGetPointWithinPath();

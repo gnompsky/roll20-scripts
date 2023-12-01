@@ -43,4 +43,4 @@ declare type CustomFxDefinition = {
 declare type OneOfPathDefinition = PolygonPathDefinition | OvalPathDefinition | FreehandPathDefinition; 
 declare type PolygonPathDefinition = (["M", number, number] | ["L", number, number])[];
 declare type OvalPathDefinition = (["M", number, number] | ["C", number, number, number, number, number, number])[];
-declare type FreehandPathDefinition = (["M", number, number] | ["Q", number, number, number, number])[];
+declare type FreehandPathDefinition = (["M" | "L", number, number] | ["Q", number, number, number, number])[];
