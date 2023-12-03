@@ -45,19 +45,29 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
     
     switch (true) {
       case (command === "list"): return this.handleListCommand(msg, commandArgs.length >= 1 ? commandArgs[0] : undefined);
-      case (command === "record" && commandArgs.length >= 2): 
+      case (command === "record" && commandArgs.length >= 3): 
         return this.handleRecordCommand(
           msg, 
-          commandArgs[0], 
-          parseInt(commandArgs[1], 10), 
-          commandArgs.length >= 3 && commandArgs[2].toLowerCase() === "true" // Default to false
+          parseInt(commandArgs[0], 10), 
+          commandArgs[1].toLowerCase() === "true",
+          commandArgs.slice(2).join(" "),
         );
       case (command === "addframe" && !!this._inProduction): return this.handleAddFrame(msg);
       case (command === "deleteframe" && !!this._inProduction): return this.handleDeleteFrame(msg);
       case (command === "save" && !!this._inProduction): return this.handleSaveAnimation(msg);
-      case (command === "play" && commandArgs.length >= 1): return this.handlePlayCommand(msg, commandArgs[0]);
-      case (command === "stop" && commandArgs.length >= 1): return this.handleStopCommand(msg, commandArgs[0]);
-      case (command === "delete" && commandArgs.length >= 1): return this.handleDeleteCommand(msg, commandArgs[0]);
+      case (command === "setfps" && commandArgs.length >= 2): return this.handleSetFps(
+        msg,
+        parseInt(commandArgs[0], 10),
+        commandArgs.slice(1).join(" ")
+      );
+      case (command === "setloop" && commandArgs.length >= 2): return this.handleSetLoop(
+        msg,
+        commandArgs[0].toLowerCase() === "true",
+        commandArgs.slice(1).join(" ")
+      );
+      case (command === "play" && commandArgs.length >= 1): return this.handlePlayCommand(msg, commandArgs.join(" "));
+      case (command === "stop" && commandArgs.length >= 1): return this.handleStopCommand(msg, commandArgs.join(" "));
+      case (command === "delete" && commandArgs.length >= 1): return this.handleDeleteCommand(msg, commandArgs.join(" "));
       default: return logger(AnimationStudio, `ERROR: Unknown subcommand '${args[1]}'`);
     }
   }
@@ -74,7 +84,8 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
     
     let message = `/w gm &{template:default} {{name=Animation Studio
 }} {{[List (this page)](!animation list)=[List (all pages)](!animation list all)
-}} {{[New](!animation record ?{Animation name} ?{FPS|1} ?{Loop?|No,false|Yes,true})=[Delete (from this page)](!animation delete ?{Animation|${animationList}})
+}} {{[New](!animation record ?{FPS|1} ?{Loop?|No,false|Yes,true} ?{Animation name})=[Delete (from this page)](!animation delete ?{Animation|${animationList}})
+}} {{[Set FPS](!animation setfps ?{FPS|1} ?{Animation|${animationList}})=[Set Loop](!animation setloop ?{Loop?|No,false|Yes,true} ?{Animation|${animationList}})
 }} {{[Play](!animation play ?{Animation|${animationList}})=[Stop](!animation stop ?{Animation|${animationList}})
 }}`;
     
@@ -99,7 +110,7 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
     sendChat(msg.who, message);
   }
   
-  private handleRecordCommand(msg: ApiMessage, animationName: string, fps: number, loop: boolean): void {
+  private handleRecordCommand(msg: ApiMessage, fps: number, loop: boolean, animationName: string): void {
       const pageId = this.getPageId(msg);
       const page = this.getPage(pageId);
       
@@ -164,6 +175,25 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
     this._inProduction = null;
     
     sendChat(msg.who, `/w gm Animation '${key.split(".")[1]}' saved`);
+    this.handleRenderMenu(msg);
+  }
+  
+  private handleSetFps(msg: ApiMessage, fps: number, animationName: string): void {
+    const state = this.getState();
+    const key: AnimationStudio.AnimationKey = `${this.getPageId(msg)}.${animationName}`;
+    const animation = state.animations[key];
+    if (!animation) return sendChat(msg.who, `/w gm Animation '${animationName}' not found`);
+    
+    animation.fps = fps;
+  }
+  
+  private handleSetLoop(msg: ApiMessage, loop: boolean, animationName: string): void {
+    const state = this.getState();
+    const key: AnimationStudio.AnimationKey = `${this.getPageId(msg)}.${animationName}`;
+    const animation = state.animations[key];
+    if (!animation) return sendChat(msg.who, `/w gm Animation '${animationName}' not found`);
+    
+    animation.loop = loop;
   }
   
   private handlePlayCommand(msg: ApiMessage, animationName: string): void {
@@ -190,6 +220,7 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
     delete state.animations[key];
     delete this._playing[key];
     sendChat(msg.who, `/w gm Animation '${animationName}' deleted`);
+    this.handleRenderMenu(msg);
   }
   
   private renderRecordMenu(msg: ApiMessage): void {
@@ -209,6 +240,9 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
     // Capture the stop function so we don't have to pass a context around
     const stopThisAnimation = _.bind(() => this.stopAnimation(key), this);
     stopThisAnimation();
+    
+    const frameTime = Math.floor(1000 / animation.fps);
+    logger(AnimationStudio, `Playing a frame of ${key} every ${frameTime}ms`);
 
     let currentFrame = 0;
     this._playing[key] = setInterval(
@@ -220,8 +254,11 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
         }
 
         const frame = animation.frames[currentFrame];
+        logger(AnimationStudio, `Playing frame ${currentFrame} of ${key}`);
         _.forEach(frame.objectProperties, (props, id) => {
           const graphic = getObj("graphic", id)!;
+          logger(AnimationStudio, `Setting props of ${graphic.id}`);
+
           if (graphic.get("_subtype") !== "token") return;
 
           graphic.set(props);
@@ -229,7 +266,7 @@ class AnimationStudio implements Mod<AnimationStudio.State> {
         currentFrame++;
       },
       // ...at the animation's FPS
-      Math.floor(1000 / animation.fps)
+      frameTime
     );
   }
   private stopAnimation(key: AnimationStudio.AnimationKey) {
