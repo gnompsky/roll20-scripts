@@ -1,7 +1,15 @@
 ﻿class SiegeTools implements Mod {
   private readonly _inProgress: Record<ObjectId, NodeJS.Timeout | null> = {};
+  private readonly _sfxTracks: JukeboxTrackObject[] = [];
+  private readonly _vfxTypes: EffectType[] = ["bomb-smoke", "bomb-fire"];
   
-  public initialise(): void {}
+  public initialise(): void {
+    const sfxTracks = getJukeboxTracksByPlaylistName("SFX: Siege Weapons");
+    if (sfxTracks?.length) {
+      this._sfxTracks.length = 0;
+      this._sfxTracks.push(...sfxTracks);
+    }
+  }
   public registerEventHandlers(): void {
     on("chat:message", _.bind(this.handleChatMessage, this)); 
   }
@@ -60,9 +68,23 @@
         - (target.get("height") / 2)
         + (point.y * target.get("scaleY"));
 
-      const type = pickFromList(SiegeTools.explosionEffects);
-
-      spawnFx(x, y, type, target.get("_pageid"));
+      // Pick a VFX and prepare to play it
+      const vfxType = pickFromList(this._vfxTypes)!;
+      const playVfx = () => spawnFx(x, y, vfxType, target.get("_pageid"));
+      
+      // Pick an SFX and prepare to play it
+      const sfxTrack = pickFromList(this._sfxTracks);
+      
+      if (sfxTrack) {
+        // If we have an SFX, play it and then play the VFX on a slight delay to give Roll20 time to start the sound
+        sfxTrack.set("loop", false);
+        sfxTrack.set("softstop", false);
+        sfxTrack.set("playing", true);
+        setTimeout(playVfx, 200);
+      } else {
+        // If we don't have SFX, just play the VFX immediately
+        playVfx();
+      }
     }, interval);
   }
   
@@ -73,8 +95,6 @@
     clearTimeout(timer);
     delete this._inProgress[targetId];
   }
-  
-  private static readonly explosionEffects: EffectType[] = ["bomb-smoke", "bomb-fire"];
 }
 
 registerMod(SiegeTools);

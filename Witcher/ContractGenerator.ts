@@ -14,7 +14,7 @@
     const locationIndex = randomInteger(ContractGenerator.locations.length) - 1;
     const location = ContractGenerator.locations[locationIndex];
 
-    const preyType = pickFromList(Object.keys(ContractGenerator.preyLists));
+    const preyType = pickFromList(Object.keys(ContractGenerator.preyLists))!;
     const specificPreyList = ContractGenerator.preyLists[preyType][locationIndex];
     const specificPrey = specificPreyList.length > 0
       ? `${pickFromList(specificPreyList)} (${preyType})`

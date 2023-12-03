@@ -51,7 +51,8 @@ function getAttrByNameAsInt(character_id: ObjectId, attribute_name: string, valu
   return stringValue ? parseInt(stringValue, 10) : undefined;
 }
 
-function pickFromList<T>(list: T[]): T {
+function pickFromList<T>(list: T[]): T | undefined {
+  if (!list.length) return;
   return _.sample(list, 1)[0];
 }
 
@@ -101,4 +102,38 @@ function playerControls(token: Roll20Object<{ controlledby: PlayerList }>, playe
   const controlledBy = token.get("controlledby");
   if (controlledBy === "all") return true;
   return controlledBy.split(",").indexOf(playerId) !== -1;
+}
+
+enum JukeboxPlaylistPlayMode {
+  /* Play the playlist in a random order. */
+  Shuffle = "s",
+  /* Play all tracks simultaneously. */
+  Simulplay = "a",
+  /* Play the playlist through once in order. */
+  PlayOnce = "o",
+  /* Play the playlist through in order, then repeat indefinitely. */
+  Loop = "b",
+}
+type JukeboxPlaylist = {
+  /* ID of the playlist. */
+  id: ObjectId;
+  /* Name of the playlist. */
+  n: string;
+  /* Array of track IDs within the playlist. */
+  i: ObjectId[],
+  /* Play mode of the playlist. */
+  s: JukeboxPlaylistPlayMode;
+}
+type Jukebox = (ObjectId | JukeboxPlaylist)[];
+function getJukebox(): Jukebox {
+  return JSON.parse(Campaign().get("_jukeboxfolder"));
+}
+function getJukeboxPlaylistByName(playlistName: string) {
+  return getJukebox().find(x => typeof x !== "string" && x.n === playlistName) as JukeboxPlaylist | undefined;
+}
+function getJukeboxTracksByPlaylistName(playlistName: string) {
+  const playlist = getJukeboxPlaylistByName(playlistName);
+  if (!playlist) return;
+  
+  return playlist.i.map(x => getObj("jukeboxtrack", x)!);
 }
